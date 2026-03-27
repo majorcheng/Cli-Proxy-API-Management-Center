@@ -4,20 +4,49 @@ on:
   push:
     tags:
       - 'v*'
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要构建并上传的标签，例如 v1.1.7'
+        required: true
+        type: string
 
 jobs:
   build-and-release:
+    if: github.event_name != 'release' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
 
     steps:
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.ref_name }}"
+          fi
+
+          if [ -z "${tag}" ]; then
+            echo "无法确定发布标签" >&2
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
+          ref: ${{ steps.meta.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,7 +60,7 @@ jobs:
       - name: Build all-in-one HTML
         run: npm run build
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ steps.meta.outputs.tag }}
 
       - name: Prepare release assets
         run: |
@@ -40,9 +69,10 @@ jobs:
           ls -lh management.html
 
       - name: Generate release notes
+        if: github.event_name == 'push'
         run: |
           set -euo pipefail
-          current_tag="${GITHUB_REF_NAME}"
+          current_tag="${{ steps.meta.outputs.tag }}"
           previous_tag="$(git tag --list 'v*' --sort=-v:refname | grep -v "^${current_tag}$" | head -n 1 || true)"
           if [ -n "${previous_tag}" ]; then
             range="${previous_tag}..${current_tag}"
@@ -53,12 +83,25 @@ jobs:
           : > release-notes.md
           git log --pretty=format:"- %h %s" "${range}" >> release-notes.md
 
-      - name: Create Release
+      - name: Create release from tag push
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.meta.outputs.tag }}
           files: dist/management.html
           body_path: release-notes.md
+          overwrite_files: true
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload asset to existing release
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: dist/management.html
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
