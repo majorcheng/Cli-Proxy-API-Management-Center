@@ -3,12 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Card } from '@/components/ui/Card';
 import { usageApi, authFilesApi } from '@/services/api';
-import { useDisableModel } from '@/hooks';
 import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
 import { resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import { TimeRangeSelector, formatTimeRangeCaption, type TimeRange } from './TimeRangeSelector';
-import { DisableModelModal } from './DisableModelModal';
 import {
   maskSecret,
   formatProviderDisplay,
@@ -102,16 +100,6 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
   // 认证文件映射（优先使用 prop，否则自行加载）
   const [localAuthFileMap, setLocalAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
   const authFileMap = propAuthFileMap?.size ? propAuthFileMap : localAuthFileMap;
-
-  // 使用禁用模型 Hook
-  const {
-    disableState,
-    disabling,
-    isModelDisabled,
-    handleDisableClick,
-    handleConfirmDisable,
-    handleCancelDisable,
-  } = useDisableModel({ providerMap, sourceInfoMap });
 
   // 处理时间范围变化
   const handleTimeRangeChange = useCallback((range: TimeRange, custom?: DateRange) => {
@@ -422,7 +410,6 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
   const renderRow = (entry: LogEntry) => {
     const stats = getStats(entry);
     const rateValue = parseFloat(stats.successRate);
-    const disabled = isModelDisabled(entry.source, entry.model);
     // 当前按用户要求保留认证索引原值显示
     const authDisplayName = entry.authIndex || '-';
 
@@ -453,6 +440,9 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
             {entry.failed ? t('monitor.logs.failed') : t('monitor.logs.success')}
           </span>
         </td>
+        <td title={entry.latencyMs === null ? '-' : `${entry.latencyMs} ms`}>
+          {formatLatency(entry.latencyMs)}
+        </td>
         <td>
           <div className={styles.statusBars}>
             {stats.recentRequests.map((req, idx) => (
@@ -470,29 +460,7 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
         <td>{formatNumber(entry.inputTokens)}</td>
         <td>{formatNumber(entry.outputTokens)}</td>
         <td>{formatNumber(entry.totalTokens)}</td>
-        <td title={entry.latencyMs === null ? '-' : `${entry.latencyMs} ms`}>
-          {formatLatency(entry.latencyMs)}
-        </td>
         <td>{formatTimestamp(entry.timestamp)}</td>
-        <td>
-          {entry.providerType.toLowerCase() === 'openai' && entry.source && entry.source !== '-' && entry.source !== 'unknown' ? (
-            disabled ? (
-              <span className={styles.disabledLabel}>
-                {t('monitor.logs.disabled')}
-              </span>
-            ) : (
-              <button
-                className={styles.disableBtn}
-                title={t('monitor.logs.disable_model')}
-                onClick={() => handleDisableClick(entry.source, entry.model)}
-              >
-                {t('monitor.logs.disable')}
-              </button>
-            )
-          ) : (
-            '-'
-          )}
-        </td>
       </>
     );
   };
@@ -608,15 +576,14 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
                       <th>{t('monitor.logs.header_model')}</th>
                       <th>{t('monitor.logs.header_source')}</th>
                       <th>{t('monitor.logs.header_status')}</th>
+                      <th>{t('monitor.logs.header_latency')}</th>
                       <th>{t('monitor.logs.header_recent')}</th>
                       <th>{t('monitor.logs.header_rate')}</th>
                       <th>{t('monitor.logs.header_count')}</th>
                       <th>{t('monitor.logs.header_input')}</th>
                       <th>{t('monitor.logs.header_output')}</th>
                       <th>{t('monitor.logs.header_total')}</th>
-                      <th>{t('monitor.logs.header_latency')}</th>
                       <th>{t('monitor.logs.header_time')}</th>
-                      <th>{t('monitor.logs.header_actions')}</th>
                     </tr>
                   </thead>
                 </table>
@@ -677,14 +644,6 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
           </div>
         )}
       </Card>
-
-      {/* 禁用确认弹窗 */}
-      <DisableModelModal
-        disableState={disableState}
-        disabling={disabling}
-        onConfirm={handleConfirmDisable}
-        onCancel={handleCancelDisable}
-      />
     </>
   );
 }
