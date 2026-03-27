@@ -35,6 +35,7 @@ interface LogEntry {
   id: string;
   timestamp: string;
   timestampMs: number;
+  latencyMs: number | null;
   apiKey: string;
   model: string;
   source: string;
@@ -270,6 +271,7 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
             id: `${idCounter++}`,
             timestamp: detail.timestamp,
             timestampMs,
+            latencyMs: typeof detail.latency_ms === 'number' ? detail.latency_ms : null,
             apiKey,
             model: modelName,
             source,
@@ -394,6 +396,19 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
     return num.toLocaleString('zh-CN');
   };
 
+  // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求
+  const formatLatency = (latencyMs: number | null) => {
+    if (latencyMs === null || Number.isNaN(latencyMs)) {
+      return '-';
+    }
+    if (latencyMs < 1000) {
+      return `${latencyMs} ms`;
+    }
+    const seconds = latencyMs / 1000;
+    const precision = seconds >= 10 ? 1 : 2;
+    return `${Number(seconds.toFixed(precision))} s`;
+  };
+
   // 获取预计算的统计数据
   const getStats = (entry: LogEntry): PrecomputedStats => {
     return precomputedStats.get(entry.id) || {
@@ -408,7 +423,7 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
     const stats = getStats(entry);
     const rateValue = parseFloat(stats.successRate);
     const disabled = isModelDisabled(entry.source, entry.model);
-    // 将 authIndex 映射为文件名
+    // 当前按用户要求保留认证索引原值显示
     const authDisplayName = entry.authIndex || '-';
 
     return (
@@ -455,6 +470,9 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
         <td>{formatNumber(entry.inputTokens)}</td>
         <td>{formatNumber(entry.outputTokens)}</td>
         <td>{formatNumber(entry.totalTokens)}</td>
+        <td title={entry.latencyMs === null ? '-' : `${entry.latencyMs} ms`}>
+          {formatLatency(entry.latencyMs)}
+        </td>
         <td>{formatTimestamp(entry.timestamp)}</td>
         <td>
           {entry.providerType.toLowerCase() === 'openai' && entry.source && entry.source !== '-' && entry.source !== 'unknown' ? (
@@ -596,6 +614,7 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
                       <th>{t('monitor.logs.header_input')}</th>
                       <th>{t('monitor.logs.header_output')}</th>
                       <th>{t('monitor.logs.header_total')}</th>
+                      <th>{t('monitor.logs.header_latency')}</th>
                       <th>{t('monitor.logs.header_time')}</th>
                       <th>{t('monitor.logs.header_actions')}</th>
                     </tr>

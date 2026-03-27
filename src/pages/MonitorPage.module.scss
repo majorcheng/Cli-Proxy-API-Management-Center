@@ -586,7 +586,7 @@
 // 虚拟滚动表格固定列宽
 .virtualTable {
   table-layout: fixed;
-  min-width: 1280px;
+  min-width: 1380px;
 
   th, td {
     overflow: hidden;
@@ -618,10 +618,12 @@
   th:nth-child(11), td:nth-child(11) { width: 60px; }
   // 总 Token
   th:nth-child(12), td:nth-child(12) { width: 70px; }
+  // 响应时间
+  th:nth-child(13), td:nth-child(13) { width: 90px; }
   // 时间
-  th:nth-child(13), td:nth-child(13) { width: 150px; }
+  th:nth-child(14), td:nth-child(14) { width: 150px; }
   // 操作
-  th:nth-child(14), td:nth-child(14) { width: 60px; }
+  th:nth-child(15), td:nth-child(15) { width: 60px; }
 }
 
 .table {
