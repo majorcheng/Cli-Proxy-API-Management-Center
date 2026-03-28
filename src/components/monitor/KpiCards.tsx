@@ -7,6 +7,7 @@ interface KpiCardsProps {
   data: UsageData | null;
   loading: boolean;
   timeRange: number;
+  authFileTotal: number | null;
 }
 
 // 格式化数字
@@ -23,7 +24,7 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-export function KpiCards({ data, loading, timeRange }: KpiCardsProps) {
+export function KpiCards({ data, loading, timeRange, authFileTotal }: KpiCardsProps) {
   const { t } = useTranslation();
 
   // 计算统计数据
@@ -119,6 +120,17 @@ export function KpiCards({ data, loading, timeRange }: KpiCardsProps) {
 
   return (
     <div className={styles.kpiGrid}>
+      {/* 号池总数 */}
+      <div className={styles.kpiCard}>
+        <div className={styles.kpiTitle}>
+          <span className={styles.kpiLabel}>{t('monitor.auth_files_total')}</span>
+          <span className={styles.kpiTag}>{t('nav.auth_files')}</span>
+        </div>
+        <div className={styles.kpiValue}>
+          {authFileTotal === null ? '--' : authFileTotal.toLocaleString()}
+        </div>
+      </div>
+
       {/* 请求数 */}
       <div className={styles.kpiCard}>
         <div className={styles.kpiTitle}>

@@ -1482,6 +1482,7 @@
     "apply": "查看",
     "no_data": "暂无数据",
     "requests": "请求",
+    "auth_files_total": "号池总数",
     "kpi": {
       "requests": "请求数",
       "success": "成功",

@@ -36,9 +36,15 @@ export function RestoreCard() {
     setFiles(result);
   }, [serverUrl, loadHistory]);
 
-  // 初始加载 + 备份成功后自动刷新列表
+  // 使用异步调度避免在 effect 中同步触发 setState，满足 React Hooks lint 规则。
   useEffect(() => {
-    refresh();
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [refresh, lastBackupTime]);
 
   const handleRestore = useCallback(

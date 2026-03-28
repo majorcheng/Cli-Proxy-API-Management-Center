@@ -92,6 +92,7 @@ export function MonitorPage() {
   const [providerTypeMap, setProviderTypeMap] = useState<Record<string, string>>({});
   const [sourceInfoMap, setSourceInfoMap] = useState<Map<string, import('@/types/sourceInfo').SourceInfo>>(new Map());
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
+  const [authFileTotal, setAuthFileTotal] = useState<number | null>(null);
 
   // 加载渠道名称映射（支持所有提供商类型）
   const loadProviderMap = useCallback(async () => {
@@ -214,7 +215,12 @@ export function MonitorPage() {
 
       // 构建 authFileMap（认证文件索引 → 凭证信息）
       const credMap = new Map<string, CredentialInfo>();
-      const files = (authFilesResponse as { files?: unknown[] })?.files || [];
+      const files = (authFilesResponse as { files?: unknown[]; total?: number })?.files || [];
+      setAuthFileTotal(
+        typeof (authFilesResponse as { total?: unknown })?.total === 'number'
+          ? (authFilesResponse as { total: number }).total
+          : files.length
+      );
       files.forEach((file) => {
         if (!file || typeof file !== 'object') return;
         const f = file as Record<string, unknown>;
@@ -228,6 +234,7 @@ export function MonitorPage() {
       });
       setAuthFileMap(credMap);
     } catch (err) {
+      setAuthFileTotal(null);
       console.warn('Monitor: Failed to load provider map:', err);
     }
   }, []);
@@ -340,7 +347,7 @@ export function MonitorPage() {
       </div>
 
       {/* KPI 卡片 */}
-      <KpiCards data={filteredData} loading={loading} timeRange={timeRange} />
+      <KpiCards data={filteredData} loading={loading} timeRange={timeRange} authFileTotal={authFileTotal} />
 
       {/* 图表区域 */}
       <div className={styles.chartsGrid}>

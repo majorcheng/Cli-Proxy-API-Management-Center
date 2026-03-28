@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -16,16 +16,26 @@ interface RestoreModalProps {
 export function RestoreModal({ open, onClose, onRestore, loading, filename }: RestoreModalProps) {
   const { t } = useTranslation();
 
-  const [scope, setScope] = useState<BackupScope>({
+  const defaultScope = useMemo<BackupScope>(() => ({
     localStorage: true,
     config: false,
     usage: true,
-  });
+  }), []);
 
-  // 每次打开弹窗时重置为默认值
+  const [scope, setScope] = useState<BackupScope>(defaultScope);
+
+  // 使用异步调度避免在 effect 中同步触发 setState，满足 React Hooks lint 规则。
   useEffect(() => {
-    if (open) setScope({ localStorage: true, config: false, usage: true });
-  }, [open]);
+    if (!open) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      setScope(defaultScope);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [defaultScope, open]);
 
   const scopeItems: { key: keyof BackupScope; label: string; hint: string }[] = [
     { key: 'localStorage', label: t('backup.scope_preferences'), hint: t('backup.scope_preferences_hint') },

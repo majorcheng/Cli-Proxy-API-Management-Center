@@ -173,7 +173,7 @@
 .kpiGrid {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
 
   @include tablet {
     grid-template-columns: repeat(3, 1fr);

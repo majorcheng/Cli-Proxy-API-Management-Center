@@ -1482,6 +1482,7 @@
     "apply": "Apply",
     "no_data": "No data available",
     "requests": "Requests",
+    "auth_files_total": "Auth pool total",
     "kpi": {
       "requests": "Requests",
       "success": "Success",
