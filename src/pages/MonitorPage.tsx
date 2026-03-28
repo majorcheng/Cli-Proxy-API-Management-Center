@@ -276,6 +276,11 @@ export function MonitorPage() {
     return filterDataByTimeRange(apiFilteredData, timeRange);
   }, [apiFilteredData, timeRange]);
 
+  // 每日用量趋势固定展示最近 30 天，仅受 API 过滤影响
+  const dailyTrendData = useMemo(() => {
+    return filterDataByTimeRange(apiFilteredData, 30);
+  }, [apiFilteredData]);
+
   // 处理时间范围变化
   const handleTimeRangeChange = (range: TimeRange) => {
     setTimeRange(range);
@@ -352,7 +357,7 @@ export function MonitorPage() {
       {/* 图表区域 */}
       <div className={styles.chartsGrid}>
         <ModelDistributionChart data={filteredData} loading={loading} isDark={isDark} timeRange={timeRange} />
-        <DailyTrendChart data={filteredData} loading={loading} isDark={isDark} timeRange={timeRange} />
+        <DailyTrendChart data={dailyTrendData} loading={loading} isDark={isDark} timeRange={30} />
       </div>
 
       {/* 小时级图表 */}

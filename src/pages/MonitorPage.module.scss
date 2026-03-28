@@ -547,22 +547,22 @@
     white-space: nowrap;
   }
 
-  // Auth 认证来源
-  th:nth-child(1), td:nth-child(1) { width: 80px; }
-  // API
-  th:nth-child(2), td:nth-child(2) { width: 100px; }
-  // 请求类型
-  th:nth-child(3), td:nth-child(3) { width: 65px; }
   // 模型
-  th:nth-child(4), td:nth-child(4) { width: 150px; }
-  // 请求渠道
-  th:nth-child(5), td:nth-child(5) { width: 200px; }
+  th:nth-child(1), td:nth-child(1) { width: 150px; }
   // 状态
-  th:nth-child(6), td:nth-child(6) { width: 60px; }
+  th:nth-child(2), td:nth-child(2) { width: 60px; }
   // 响应时间
-  th:nth-child(7), td:nth-child(7) { width: 90px; }
+  th:nth-child(3), td:nth-child(3) { width: 90px; }
   // 最近请求状态
-  th:nth-child(8), td:nth-child(8) { width: 100px; }
+  th:nth-child(4), td:nth-child(4) { width: 100px; }
+  // Auth 认证来源
+  th:nth-child(5), td:nth-child(5) { width: 80px; }
+  // API
+  th:nth-child(6), td:nth-child(6) { width: 100px; }
+  // 请求类型
+  th:nth-child(7), td:nth-child(7) { width: 65px; }
+  // 请求渠道
+  th:nth-child(8), td:nth-child(8) { width: 200px; }
   // 成功率
   th:nth-child(9), td:nth-child(9) { width: 70px; }
   // 请求数

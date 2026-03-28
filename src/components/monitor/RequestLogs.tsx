@@ -399,25 +399,8 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
 
     return (
       <>
-        <td title={authDisplayName}>
-          {authDisplayName}
-        </td>
-        <td title={entry.apiKey}>
-          {maskSecret(entry.apiKey)}
-        </td>
-        <td>{entry.providerType}</td>
         <td title={entry.model}>
           {entry.model}
-        </td>
-        <td title={entry.source}>
-          {entry.providerName ? (
-            <>
-              <span className={styles.channelName}>{entry.providerName}</span>
-              <span className={styles.channelSecret}> ({entry.maskedKey})</span>
-            </>
-          ) : (
-            entry.maskedKey
-          )}
         </td>
         <td>
           <span className={`${styles.statusPill} ${entry.failed ? styles.failed : styles.success}`}>
@@ -436,6 +419,23 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
               />
             ))}
           </div>
+        </td>
+        <td title={authDisplayName}>
+          {authDisplayName}
+        </td>
+        <td title={entry.apiKey}>
+          {maskSecret(entry.apiKey)}
+        </td>
+        <td>{entry.providerType}</td>
+        <td title={entry.source}>
+          {entry.providerName ? (
+            <>
+              <span className={styles.channelName}>{entry.providerName}</span>
+              <span className={styles.channelSecret}> ({entry.maskedKey})</span>
+            </>
+          ) : (
+            entry.maskedKey
+          )}
         </td>
         <td className={getRateClassName(rateValue, styles)}>
           {stats.successRate}%
@@ -551,14 +551,14 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
             <table className={`${styles.table} ${styles.virtualTable}`}>
               <thead>
                 <tr>
-                  <th>{t('monitor.logs.header_auth')}</th>
-                  <th>{t('monitor.logs.header_api')}</th>
-                  <th>{t('monitor.logs.header_request_type')}</th>
                   <th>{t('monitor.logs.header_model')}</th>
-                  <th>{t('monitor.logs.header_source')}</th>
                   <th>{t('monitor.logs.header_status')}</th>
                   <th>{t('monitor.logs.header_latency')}</th>
                   <th>{t('monitor.logs.header_recent')}</th>
+                  <th>{t('monitor.logs.header_auth')}</th>
+                  <th>{t('monitor.logs.header_api')}</th>
+                  <th>{t('monitor.logs.header_request_type')}</th>
+                  <th>{t('monitor.logs.header_source')}</th>
                   <th>{t('monitor.logs.header_rate')}</th>
                   <th>{t('monitor.logs.header_count')}</th>
                   <th>{t('monitor.logs.header_input')}</th>
