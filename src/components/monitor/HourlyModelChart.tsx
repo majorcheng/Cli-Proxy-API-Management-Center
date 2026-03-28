@@ -25,7 +25,7 @@ type HourRange = 6 | 12 | 24;
 
 export function HourlyModelChart({ data, loading, isDark }: HourlyModelChartProps) {
   const { t } = useTranslation();
-  const [hourRange, setHourRange] = useState<HourRange>(12);
+  const [hourRange, setHourRange] = useState<HourRange>(24);
 
   // 按小时聚合数据
   const hourlyData = useMemo(() => {

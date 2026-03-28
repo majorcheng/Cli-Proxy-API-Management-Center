@@ -15,7 +15,7 @@ type HourRange = 6 | 12 | 24;
 
 export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProps) {
   const { t } = useTranslation();
-  const [hourRange, setHourRange] = useState<HourRange>(12);
+  const [hourRange, setHourRange] = useState<HourRange>(24);
 
   // 按小时聚合 Token 数据
   const hourlyData = useMemo(() => {
