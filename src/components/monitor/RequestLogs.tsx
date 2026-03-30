@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { usageApi, authFilesApi } from '@/services/api';
 import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
+import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
 import { resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import { TimeRangeSelector, formatTimeRangeCaption, type TimeRange } from './TimeRangeSelector';
@@ -44,7 +45,7 @@ interface LogEntry {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
-  authIndex: string;
+  clientIp: string;
 }
 
 interface ChannelModelRequest {
@@ -258,7 +259,9 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
             inputTokens: detail.tokens.input_tokens || 0,
             outputTokens: detail.tokens.output_tokens || 0,
             totalTokens: detail.tokens.total_tokens || 0,
-            authIndex: detail.auth_index || '',
+            // 新版后端会返回 client_ip；旧快照可能仍只有 auth_index，这里保留回退，
+            // 避免历史数据在监控中心中直接显示为空。
+            clientIp: normalizeRequestClientIp(detail.client_ip) ?? normalizeAuthIndex(detail.auth_index) ?? '',
           });
         });
       });
@@ -394,8 +397,7 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
   const renderRow = (entry: LogEntry) => {
     const stats = getStats(entry);
     const rateValue = parseFloat(stats.successRate);
-    // 当前按用户要求保留认证索引原值显示
-    const authDisplayName = entry.authIndex || '-';
+    const requestIpDisplay = entry.clientIp || '-';
 
     return (
       <>
@@ -420,8 +422,8 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
             ))}
           </div>
         </td>
-        <td title={authDisplayName}>
-          {authDisplayName}
+        <td title={requestIpDisplay}>
+          {requestIpDisplay}
         </td>
         <td title={entry.apiKey}>
           {maskSecret(entry.apiKey)}

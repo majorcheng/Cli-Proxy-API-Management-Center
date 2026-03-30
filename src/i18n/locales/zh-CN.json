@@ -1598,7 +1598,7 @@
       "refresh_60s": "60秒刷新",
       "refresh_in_seconds": "{{seconds}}秒后刷新",
       "refreshing": "刷新中...",
-      "header_auth": "认证索引",
+      "header_auth": "请求 IP",
       "header_api": "请求 API",
       "header_request_type": "请求类型",
       "header_model": "请求模型",
