@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Chart } from 'react-chartjs-2';
 import type { UsageData } from '@/pages/MonitorPage';
 import { formatLocalHourKey, getHourlyRangeBounds } from '@/utils/monitor';
+import {
+  convertMonitorTokensToDisplayValue,
+  formatMonitorTokenDisplayValue,
+  getMonitorTokenAxisTitle,
+} from '@/utils/monitorTokenUnit';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface HourlyTokenChartProps {
@@ -16,6 +21,7 @@ type HourRange = 6 | 12 | 24;
 export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProps) {
   const { t } = useTranslation();
   const [hourRange, setHourRange] = useState<HourRange>(24);
+  const tokenAxisTitle = getMonitorTokenAxisTitle(t('monitor.kpi.tokens'));
 
   // 按小时聚合 Token 数据
   const hourlyData = useMemo(() => {
@@ -71,11 +77,11 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
 
     return {
       hours,
-      totalTokens: hours.map((h) => (hourlyStats[h]?.total || 0) / 1000),
-      inputTokens: hours.map((h) => (hourlyStats[h]?.input || 0) / 1000),
-      outputTokens: hours.map((h) => (hourlyStats[h]?.output || 0) / 1000),
-      reasoningTokens: hours.map((h) => (hourlyStats[h]?.reasoning || 0) / 1000),
-      cachedTokens: hours.map((h) => (hourlyStats[h]?.cached || 0) / 1000),
+      totalTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.total || 0)),
+      inputTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.input || 0)),
+      outputTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.output || 0)),
+      reasoningTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.reasoning || 0)),
+      cachedTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.cached || 0)),
     };
   }, [data, hourRange]);
 
@@ -181,8 +187,8 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
         callbacks: {
           label: (context: any) => {
             const label = context.dataset.label || '';
-            const value = context.raw;
-            return `${label}: ${value.toFixed(1)}K`;
+            const value = Number(context.raw);
+            return `${label}: ${formatMonitorTokenDisplayValue(value)}`;
           },
         },
       },
@@ -209,11 +215,11 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
           font: {
             size: 11,
           },
-          callback: (value: string | number) => `${value}K`,
+          callback: (value: string | number) => formatMonitorTokenDisplayValue(Number(value)),
         },
         title: {
           display: true,
-          text: 'Tokens (K)',
+          text: tokenAxisTitle,
           color: isDark ? '#9ca3af' : '#6b7280',
           font: {
             size: 11,
@@ -221,7 +227,7 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
         },
       },
     },
-  }), [isDark]);
+  }), [isDark, tokenAxisTitle]);
 
   return (
     <div className={styles.chartCard}>

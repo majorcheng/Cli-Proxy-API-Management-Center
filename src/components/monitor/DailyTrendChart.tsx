@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Chart } from 'react-chartjs-2';
 import type { UsageData } from '@/pages/MonitorPage';
 import { formatLocalDateKey } from '@/utils/monitor';
+import {
+  convertMonitorTokensToDisplayValue,
+  formatMonitorTokenDisplayValue,
+  getMonitorTokenAxisTitle,
+} from '@/utils/monitorTokenUnit';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface DailyTrendChartProps {
@@ -25,6 +30,7 @@ interface DailyStat {
 
 export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrendChartProps) {
   const { t } = useTranslation();
+  const tokenAxisTitle = getMonitorTokenAxisTitle(t('monitor.kpi.tokens'));
 
   // 按日期聚合数据
   const dailyData = useMemo((): DailyStat[] => {
@@ -104,7 +110,7 @@ export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrend
         {
           type: 'bar' as const,
           label: t('monitor.trend.input_tokens'),
-          data: dailyData.map((item) => item.inputTokens / 1000),
+          data: dailyData.map((item) => convertMonitorTokensToDisplayValue(item.inputTokens)),
           backgroundColor: 'rgba(34, 197, 94, 0.7)',
           borderColor: 'rgba(34, 197, 94, 0.7)',
           borderWidth: 1,
@@ -116,7 +122,7 @@ export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrend
         {
           type: 'bar' as const,
           label: t('monitor.trend.output_tokens'),
-          data: dailyData.map((item) => item.outputTokens / 1000),
+          data: dailyData.map((item) => convertMonitorTokensToDisplayValue(item.outputTokens)),
           backgroundColor: 'rgba(249, 115, 22, 0.7)',
           borderColor: 'rgba(249, 115, 22, 0.7)',
           borderWidth: 1,
@@ -174,11 +180,11 @@ export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrend
         callbacks: {
           label: (context: any) => {
             const label = context.dataset.label || '';
-            const value = context.raw;
+            const value = Number(context.raw);
             if (context.dataset.yAxisID === 'y1') {
               return `${label}: ${value.toLocaleString()}`;
             }
-            return `${label}: ${value.toFixed(1)}K`;
+            return `${label}: ${formatMonitorTokenDisplayValue(value)}`;
           },
         },
       },
@@ -207,11 +213,11 @@ export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrend
           font: {
             size: 11,
           },
-          callback: (value: string | number) => `${value}K`,
+          callback: (value: string | number) => formatMonitorTokenDisplayValue(Number(value)),
         },
         title: {
           display: true,
-          text: 'Tokens (K)',
+          text: tokenAxisTitle,
           color: isDark ? '#9ca3af' : '#6b7280',
           font: {
             size: 11,
@@ -240,7 +246,7 @@ export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrend
         },
       },
     },
-  }), [isDark, t]);
+  }), [isDark, t, tokenAxisTitle]);
 
   const timeRangeLabel = timeRange === 1
     ? t('monitor.today')
