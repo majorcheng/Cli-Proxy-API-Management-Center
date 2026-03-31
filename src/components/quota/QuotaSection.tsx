@@ -16,6 +16,7 @@ import { useQuotaLoader } from './useQuotaLoader';
 import type { QuotaConfig } from './quotaConfigs';
 import { useGridColumns } from './useGridColumns';
 import { IconRefreshCw } from '@/components/ui/icons';
+import { resolveQuotaPagedPageSize } from './pagination';
 import styles from '@/pages/QuotaPage.module.scss';
 
 type QuotaUpdater<T> = T | ((prev: T) => T);
@@ -24,7 +25,6 @@ type QuotaSetter<T> = (updater: QuotaUpdater<T>) => void;
 
 type ViewMode = 'paged' | 'all';
 
-const MAX_ITEMS_PER_PAGE = 25;
 const MAX_SHOW_ALL_THRESHOLD = 30;
 
 interface QuotaPaginationState<T> {
@@ -154,10 +154,10 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     if (effectiveViewMode === 'all') {
       setPageSize(Math.max(1, filteredFiles.length));
     } else {
-      // Paged mode: 3 rows * columns, capped to avoid oversized pages.
-      setPageSize(Math.min(columns * 3, MAX_ITEMS_PER_PAGE));
+      // 分页模式默认按配置优先，否则沿用“3 行 * 当前列数”的现有口径。
+      setPageSize(resolveQuotaPagedPageSize(columns, config.defaultPagedPageSize));
     }
-  }, [effectiveViewMode, columns, filteredFiles.length, setPageSize]);
+  }, [effectiveViewMode, columns, filteredFiles.length, setPageSize, config.defaultPagedPageSize]);
 
   const { quota, loadQuota } = useQuotaLoader(config);
 

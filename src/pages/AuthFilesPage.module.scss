@@ -380,7 +380,8 @@
 }
 
 .fileGridCompact {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 
   @include tablet {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -876,59 +877,60 @@
 }
 
 .fileCardCompact {
-  padding: 14px;
-  border-radius: 14px;
+  padding: 12px;
+  border-radius: 12px;
 
   .fileCardMain {
-    gap: 10px;
+    gap: 8px;
   }
 
   .cardHeader {
-    gap: 10px;
+    gap: 8px;
   }
 
   .cardSelection {
-    margin-top: 7px;
+    margin-top: 5px;
   }
 
   .providerAvatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
   }
 
   .providerAvatarImage {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
   .providerAvatarFallback {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .cardHeaderContent {
-    gap: 4px;
+    gap: 3px;
   }
 
   .cardBadgeRow {
-    gap: 6px;
+    gap: 4px;
   }
 
   .typeBadge,
   .stateBadge {
-    padding: 4px 8px;
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .fileName {
-    font-size: 14px;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.3;
     -webkit-line-clamp: 1;
   }
 
   .healthStatusMessage {
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 11px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 10px;
   }
 
   .quotaSection {
@@ -936,44 +938,56 @@
   }
 
   .cardActions {
-    gap: 8px;
+    gap: 6px;
     padding-top: 0;
   }
 
   .cardActionsMain {
     width: 100%;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: nowrap;
   }
 
   .primaryActionButton:global(.btn.btn-sm) {
     flex: 1 1 auto;
     min-width: 0;
-    padding-inline: 10px;
+    padding-inline: 8px;
+    height: 30px;
+    font-size: 12px;
   }
 
   .cardUtilityActions {
-    gap: 4px;
-    padding: 3px;
-    border-radius: 10px;
+    gap: 3px;
+    padding: 2px;
+    border-radius: 8px;
   }
 
   .iconButton:global(.btn.btn-sm) {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    border-radius: 9px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 8px;
   }
 
   .statusToggle {
     width: 100%;
     justify-content: space-between;
-    gap: 8px;
-    padding: 5px 8px;
+    gap: 6px;
+    padding: 4px 6px;
   }
 
   .statusToggleLabel {
-    font-size: 11px;
+    font-size: 10px;
+  }
+
+  .modelsActionIconWrap {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+  }
+
+  .actionButtonLabel {
+    font-size: 12px;
   }
 }
 
@@ -1116,25 +1130,25 @@
 .cardMetaCompact {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .cardMetaCompact .metaItem {
   flex-direction: row;
   align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
+  gap: 4px;
+  padding: 5px 8px;
   border-radius: 999px;
   flex: 0 1 auto;
 }
 
 .cardMetaCompact .metaLabel {
-  font-size: 10px;
+  font-size: 9px;
   white-space: nowrap;
 }
 
 .cardMetaCompact .metaValue {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -1230,9 +1244,9 @@
 }
 
 .cardInsightsCompact {
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
 }
 
 .cardStats {
@@ -1246,23 +1260,23 @@
 }
 
 .cardStatsCompact {
-  gap: 8px;
+  gap: 6px;
 }
 
 .cardStatsCompact .statPill {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 6px 8px;
 }
 
 .cardStatsCompact .statLabel {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .cardStatsCompact .statValue {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .statPill {
@@ -1307,7 +1321,7 @@
 }
 
 .statusPanelCompact {
-  gap: 6px;
+  gap: 4px;
 }
 
 .statusPanelCompact .statusPanelLabel {
@@ -1316,8 +1330,8 @@
 
 .statusPanelCompact .statusBar {
   flex-wrap: wrap;
-  gap: 8px;
-  row-gap: 6px;
+  gap: 6px;
+  row-gap: 4px;
 }
 
 .statusPanelCompact .statusBlocks {
@@ -1330,8 +1344,8 @@
 
 .statusPanelCompact .statusRate {
   margin-left: auto;
-  padding: 5px 7px;
-  font-size: 11px;
+  padding: 4px 6px;
+  font-size: 10px;
 }
 
 .statusPanelLabel {
