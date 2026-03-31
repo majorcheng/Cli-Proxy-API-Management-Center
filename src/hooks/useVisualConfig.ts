@@ -9,7 +9,11 @@ import type {
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
 } from '@/types/visualConfig';
-import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
+import {
+  DEFAULT_VISUAL_ROUTING_STRATEGY,
+  DEFAULT_VISUAL_VALUES,
+  normalizeVisualRoutingStrategy,
+} from '@/types/visualConfig';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -513,8 +517,7 @@ export function useVisualConfig() {
           quotaExceeded?.['switch-preview-model'] ?? true
         ),
 
-        routingStrategy:
-          routing?.strategy === 'fill-first' ? 'fill-first' : 'round-robin',
+        routingStrategy: normalizeVisualRoutingStrategy(routing?.strategy),
 
         payloadDefaultRules: parsePayloadRules(payload?.default),
         payloadDefaultRawRules: parseRawPayloadRules(payload?.['default-raw']),
@@ -628,7 +631,10 @@ export function useVisualConfig() {
           deleteIfMapEmpty(doc, ['quota-exceeded']);
         }
 
-        if (docHas(doc, ['routing']) || values.routingStrategy !== 'round-robin') {
+        if (
+          docHas(doc, ['routing']) ||
+          values.routingStrategy !== DEFAULT_VISUAL_ROUTING_STRATEGY
+        ) {
           ensureMapInDoc(doc, ['routing']);
           doc.setIn(['routing', 'strategy'], values.routingStrategy);
           deleteIfMapEmpty(doc, ['routing']);

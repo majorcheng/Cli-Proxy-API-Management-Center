@@ -27,11 +27,16 @@ import {
 } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import {
+  VISUAL_ROUTING_STRATEGIES,
+  normalizeVisualRoutingStrategy,
+} from '@/types/visualConfig';
 import type {
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
   VisualConfigFieldPath,
+  VisualRoutingStrategy,
   VisualConfigValidationErrorCode,
   VisualConfigValidationErrors,
   VisualConfigValues,
@@ -60,6 +65,12 @@ type VisualSection = {
   description: string;
   icon: ComponentType<IconProps>;
   errorCount: number;
+};
+
+const ROUTING_STRATEGY_LABEL_KEYS: Record<VisualRoutingStrategy, string> = {
+  'round-robin': 'config_management.visual.sections.network.strategy_round_robin',
+  'fill-first': 'config_management.visual.sections.network.strategy_fill_first',
+  simhash: 'config_management.visual.sections.network.strategy_simhash',
 };
 
 interface VisualConfigEditorProps {
@@ -178,6 +189,14 @@ export function VisualConfigEditor({
 }: VisualConfigEditorProps) {
   const { t } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const routingStrategyOptions = useMemo(
+    () =>
+      VISUAL_ROUTING_STRATEGIES.map((strategy) => ({
+        value: strategy,
+        label: t(ROUTING_STRATEGY_LABEL_KEYS[strategy]),
+      })),
+    [t]
+  );
   const isFloatingSidebar = useMediaQuery('(min-width: 1025px)');
   const routingStrategyLabelId = useId();
   const routingStrategyHintId = `${routingStrategyLabelId}-hint`;
@@ -795,23 +814,14 @@ export function VisualConfigEditor({
                 >
                   <Select
                     value={values.routingStrategy}
-                    options={[
-                      {
-                        value: 'round-robin',
-                        label: t('config_management.visual.sections.network.strategy_round_robin'),
-                      },
-                      {
-                        value: 'fill-first',
-                        label: t('config_management.visual.sections.network.strategy_fill_first'),
-                      },
-                    ]}
+                    options={routingStrategyOptions}
                     id={`${routingStrategyLabelId}-select`}
                     disabled={disabled}
                     ariaLabelledBy={routingStrategyLabelId}
                     ariaDescribedBy={routingStrategyHintId}
                     onChange={(nextValue) =>
                       onChange({
-                        routingStrategy: nextValue as VisualConfigValues['routingStrategy'],
+                        routingStrategy: normalizeVisualRoutingStrategy(nextValue),
                       })
                     }
                   />

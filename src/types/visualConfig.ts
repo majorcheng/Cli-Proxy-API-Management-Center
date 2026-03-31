@@ -51,6 +51,25 @@ export interface StreamingConfig {
   nonstreamKeepaliveInterval: string;
 }
 
+/**
+ * 可视化配置面板当前支持的路由策略统一收口在这里。
+ * 这样后端新增策略时，前端只需补这一处即可避免把已存在的配置误回退成默认值。
+ */
+export const VISUAL_ROUTING_STRATEGIES = ['round-robin', 'fill-first', 'simhash'] as const;
+export type VisualRoutingStrategy = (typeof VISUAL_ROUTING_STRATEGIES)[number];
+export const DEFAULT_VISUAL_ROUTING_STRATEGY: VisualRoutingStrategy = 'round-robin';
+
+export function isVisualRoutingStrategy(value: unknown): value is VisualRoutingStrategy {
+  return (
+    typeof value === 'string' &&
+    (VISUAL_ROUTING_STRATEGIES as readonly string[]).includes(value)
+  );
+}
+
+export function normalizeVisualRoutingStrategy(value: unknown): VisualRoutingStrategy {
+  return isVisualRoutingStrategy(value) ? value : DEFAULT_VISUAL_ROUTING_STRATEGY;
+}
+
 export type VisualConfigValues = {
   host: string;
   port: string;
@@ -75,7 +94,7 @@ export type VisualConfigValues = {
   maxRetryInterval: string;
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
-  routingStrategy: 'round-robin' | 'fill-first';
+  routingStrategy: VisualRoutingStrategy;
   wsAuth: boolean;
   payloadDefaultRules: PayloadRule[];
   payloadDefaultRawRules: PayloadRule[];
@@ -114,7 +133,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   maxRetryInterval: '',
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
-  routingStrategy: 'round-robin',
+  routingStrategy: DEFAULT_VISUAL_ROUTING_STRATEGY,
   wsAuth: false,
   payloadDefaultRules: [],
   payloadDefaultRawRules: [],

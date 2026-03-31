@@ -228,6 +228,8 @@ export function DashboardPage() {
       ? t('basic_settings.routing_strategy_round_robin')
       : routingStrategyRaw === 'fill-first'
         ? t('basic_settings.routing_strategy_fill_first')
+        : routingStrategyRaw === 'simhash'
+          ? t('basic_settings.routing_strategy_simhash')
         : routingStrategyRaw;
   const routingStrategyBadgeClass = !routingStrategyRaw
     ? styles.configBadgeUnknown
@@ -235,6 +237,8 @@ export function DashboardPage() {
       ? styles.configBadgeRoundRobin
       : routingStrategyRaw === 'fill-first'
         ? styles.configBadgeFillFirst
+        : routingStrategyRaw === 'simhash'
+          ? styles.configBadgeSimhash
         : styles.configBadgeUnknown;
 
   return (

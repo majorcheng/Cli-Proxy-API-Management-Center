@@ -289,6 +289,12 @@
   background: rgba($success-color, 0.12);
 }
 
+.configBadgeSimhash {
+  color: #7c3aed;
+  border-color: rgba(#7c3aed, 0.28);
+  background: rgba(#7c3aed, 0.12);
+}
+
 .configBadgeUnknown {
   color: var(--text-secondary);
   background: var(--bg-primary);
