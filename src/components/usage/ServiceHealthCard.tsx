@@ -6,7 +6,6 @@ import {
   type ServiceHealthData,
   type StatusBlockDetail,
 } from '@/utils/usage';
-import type { UsagePayload } from './hooks/useUsageData';
 import styles from '@/pages/UsagePage.module.scss';
 
 const COLOR_STOPS = [
@@ -37,7 +36,8 @@ function formatDateTime(timestamp: number): string {
 }
 
 export interface ServiceHealthCardProps {
-  usage: UsagePayload | null;
+  /** 复用 usage/monitor 两页的数据结构，只要求可被 collectUsageDetails 解析 */
+  usage: unknown | null;
   loading: boolean;
 }
 

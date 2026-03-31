@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Doughnut } from 'react-chartjs-2';
 import type { UsageData } from '@/pages/MonitorPage';
+import { formatPresetTimeRangeLabel, type PresetTimeRange } from '@/utils/monitor';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface ModelDistributionChartProps {
   data: UsageData | null;
   loading: boolean;
   isDark: boolean;
-  timeRange: number;
+  timeRange: PresetTimeRange;
 }
 
 // 颜色调色板
@@ -31,9 +32,7 @@ export function ModelDistributionChart({ data, loading, isDark, timeRange }: Mod
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>('request');
 
-  const timeRangeLabel = timeRange === 1
-    ? t('monitor.today')
-    : t('monitor.last_n_days', { n: timeRange });
+  const timeRangeLabel = formatPresetTimeRangeLabel(timeRange, t);
 
   // 计算模型分布数据
   const distributionData = useMemo(() => {

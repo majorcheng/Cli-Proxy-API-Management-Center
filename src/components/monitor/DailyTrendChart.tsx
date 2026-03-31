@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Chart } from 'react-chartjs-2';
 import type { UsageData } from '@/pages/MonitorPage';
 import { formatLocalDateKey } from '@/utils/monitor';
+import { formatPresetTimeRangeLabel, type PresetTimeRange } from '@/utils/monitor';
 import {
   convertMonitorTokensToDisplayValue,
   formatMonitorTokenDisplayValue,
@@ -14,7 +15,7 @@ interface DailyTrendChartProps {
   data: UsageData | null;
   loading: boolean;
   isDark: boolean;
-  timeRange: number;
+  timeRange: PresetTimeRange;
 }
 
 interface DailyStat {
@@ -248,9 +249,7 @@ export function DailyTrendChart({ data, loading, isDark, timeRange }: DailyTrend
     },
   }), [isDark, t, tokenAxisTitle]);
 
-  const timeRangeLabel = timeRange === 1
-    ? t('monitor.today')
-    : t('monitor.last_n_days', { n: timeRange });
+  const timeRangeLabel = formatPresetTimeRangeLabel(timeRange, t);
 
   return (
     <div className={styles.chartCard}>

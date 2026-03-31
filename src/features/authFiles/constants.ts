@@ -272,15 +272,32 @@ export function resolveAuthFileStats(file: AuthFileItem, stats: KeyStats): KeySt
   return defaultStats;
 }
 
-export const formatModified = (item: AuthFileItem): string => {
+const parseModifiedDate = (item: AuthFileItem): Date | null => {
   const raw = item['modtime'] ?? item.modified;
-  if (!raw) return '-';
+  if (!raw) return null;
   const asNumber = Number(raw);
   const date =
     Number.isFinite(asNumber) && !Number.isNaN(asNumber)
       ? new Date(asNumber < 1e12 ? asNumber * 1000 : asNumber)
       : new Date(String(raw));
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+export const formatModified = (item: AuthFileItem): string => {
+  const date = parseModifiedDate(item);
+  return date ? date.toLocaleString() : '-';
+};
+
+export const formatModifiedCompact = (item: AuthFileItem): string => {
+  const date = parseModifiedDate(item);
+  if (!date) return '-';
+  return date.toLocaleString(undefined, {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 };
 
 // 检查模型是否被 OAuth 排除

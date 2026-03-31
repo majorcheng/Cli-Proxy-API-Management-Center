@@ -13,6 +13,18 @@ export const LEGACY_DEFAULT_COMPACT_CARD_PAGE_SIZE = 12;
 export const clampCardPageSize = (value: number) =>
   Math.min(MAX_CARD_PAGE_SIZE, Math.max(MIN_CARD_PAGE_SIZE, Math.round(value)));
 
+export const isLegacyDefaultCardPageSize = (value: number | null | undefined): boolean => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return false;
+  }
+
+  const normalized = clampCardPageSize(value);
+  return (
+    normalized === LEGACY_DEFAULT_REGULAR_CARD_PAGE_SIZE ||
+    normalized === LEGACY_DEFAULT_COMPACT_CARD_PAGE_SIZE
+  );
+};
+
 /**
  * 将旧版本默认分页值视为“未显式自定义”，升级后自动迁移到新的默认值 100。
  * 若用户确实设置了其他自定义值，则仍然保留。
@@ -26,10 +38,7 @@ export const resolveAuthFilesPageSize = (
   }
 
   const normalized = clampCardPageSize(value);
-  if (
-    normalized === LEGACY_DEFAULT_REGULAR_CARD_PAGE_SIZE ||
-    normalized === LEGACY_DEFAULT_COMPACT_CARD_PAGE_SIZE
-  ) {
+  if (isLegacyDefaultCardPageSize(normalized)) {
     return defaultValue;
   }
   return normalized;

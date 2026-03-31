@@ -499,23 +499,83 @@
 
 // 卡片渐变背景 — 基于 TYPE_COLORS light.bg 转 rgba
 .antigravityCard {
-  background-image: linear-gradient(180deg, rgba(224, 247, 250, 0.12), rgba(224, 247, 250, 0));
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 86%, #d9fbff 14%);
+  --auth-card-tint: rgba(34, 211, 238, 0.2);
+  --auth-card-glow: rgba(103, 232, 249, 0.26);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 46%, #67e8f9 54%);
+  --auth-card-accent-shadow: rgba(14, 165, 233, 0.18);
 }
 
 .claudeCard {
-  background-image: linear-gradient(180deg, rgba(251, 236, 228, 0.18), rgba(251, 236, 228, 0));
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 84%, #fff1e8 16%);
+  --auth-card-tint: rgba(251, 146, 60, 0.18);
+  --auth-card-glow: rgba(253, 186, 116, 0.28);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 44%, #fdba74 56%);
+  --auth-card-accent-shadow: rgba(249, 115, 22, 0.18);
 }
 
 .codexCard {
-  background-image: linear-gradient(180deg, rgba(234, 231, 255, 0.18), rgba(234, 231, 255, 0));
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 84%, #f1ecff 16%);
+  --auth-card-tint: rgba(139, 92, 246, 0.18);
+  --auth-card-glow: rgba(196, 181, 253, 0.3);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 44%, #c4b5fd 56%);
+  --auth-card-accent-shadow: rgba(124, 58, 237, 0.18);
 }
 
 .geminiCliCard {
-  background-image: linear-gradient(180deg, rgba(224, 232, 255, 0.2), rgba(224, 232, 255, 0));
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 84%, #e8f0ff 16%);
+  --auth-card-tint: rgba(96, 165, 250, 0.18);
+  --auth-card-glow: rgba(147, 197, 253, 0.28);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 44%, #93c5fd 56%);
+  --auth-card-accent-shadow: rgba(59, 130, 246, 0.18);
 }
 
 .kimiCard {
-  background-image: linear-gradient(180deg, rgba(220, 232, 255, 0.2), rgba(220, 232, 255, 0));
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 84%, #eef4ff 16%);
+  --auth-card-tint: rgba(59, 130, 246, 0.16);
+  --auth-card-glow: rgba(125, 211, 252, 0.24);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 46%, #7dd3fc 54%);
+  --auth-card-accent-shadow: rgba(37, 99, 235, 0.18);
+}
+
+:global([data-theme='dark']) .antigravityCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 95%, #164e63 5%);
+  --auth-card-tint: rgba(34, 211, 238, 0.1);
+  --auth-card-glow: rgba(34, 211, 238, 0.1);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 68%, #22d3ee 32%);
+  --auth-card-accent-shadow: rgba(8, 145, 178, 0.24);
+}
+
+:global([data-theme='dark']) .claudeCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 95%, #7c2d12 5%);
+  --auth-card-tint: rgba(251, 146, 60, 0.1);
+  --auth-card-glow: rgba(251, 146, 60, 0.1);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 68%, #fb923c 32%);
+  --auth-card-accent-shadow: rgba(234, 88, 12, 0.24);
+}
+
+:global([data-theme='dark']) .codexCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 95%, #4c1d95 5%);
+  --auth-card-tint: rgba(139, 92, 246, 0.1);
+  --auth-card-glow: rgba(167, 139, 250, 0.1);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 68%, #8b5cf6 32%);
+  --auth-card-accent-shadow: rgba(109, 40, 217, 0.24);
+}
+
+:global([data-theme='dark']) .geminiCliCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 95%, #1e3a8a 5%);
+  --auth-card-tint: rgba(96, 165, 250, 0.1);
+  --auth-card-glow: rgba(96, 165, 250, 0.1);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 68%, #60a5fa 32%);
+  --auth-card-accent-shadow: rgba(37, 99, 235, 0.24);
+}
+
+:global([data-theme='dark']) .kimiCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 95%, #1d4ed8 5%);
+  --auth-card-tint: rgba(59, 130, 246, 0.1);
+  --auth-card-glow: rgba(125, 211, 252, 0.1);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 68%, #7dd3fc 32%);
+  --auth-card-accent-shadow: rgba(29, 78, 216, 0.24);
 }
 
 .quotaSection {
@@ -653,6 +713,62 @@
   border: 1px solid var(--warning-border);
   border-radius: $radius-sm;
   padding: $spacing-xs $spacing-sm;
+}
+
+.codexWeeklyLimitInline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
+}
+
+.codexWeeklyLimitPercent {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.codexWeeklyLimitBarWrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+}
+
+.codexWeeklyLimitBarWrap .quotaBar {
+  height: 6px;
+  width: 100%;
+}
+
+.codexWeeklyLimitMeta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.codexWeeklyLimitDivider {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  line-height: 1;
+}
+
+.codexWeeklyLimitSummary {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .codexPlan {
@@ -834,35 +950,52 @@
 
 // 单个认证文件卡片
 .fileCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 97%, var(--bg-secondary) 3%);
+  --auth-card-tint: transparent;
+  --auth-card-glow: transparent;
+  --auth-card-border: color-mix(in srgb, var(--border-color) 92%, transparent);
+  --auth-card-accent-shadow: rgba(15, 23, 42, 0.08);
+  --auth-card-highlight: color-mix(in srgb, #fff 48%, transparent);
   position: relative;
   overflow: hidden;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background:
+    radial-gradient(circle at 100% 0, var(--auth-card-glow) 0%, transparent 38%),
+    linear-gradient(180deg, var(--auth-card-tint) 0%, transparent 58%),
+    var(--auth-card-surface);
+  border: 1px solid var(--auth-card-border);
   border-radius: 16px;
   padding: 18px;
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  box-shadow:
+    inset 0 1px 0 var(--auth-card-highlight),
+    0 10px 24px -28px var(--auth-card-accent-shadow);
   transition:
     transform $transition-fast,
     box-shadow $transition-fast,
-    border-color $transition-fast;
+    border-color $transition-fast,
+    background $transition-fast;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: $shadow-md;
-    border-color: color-mix(in srgb, var(--primary-color) 36%, var(--border-color));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, #fff 62%, transparent),
+      0 14px 28px -24px var(--auth-card-accent-shadow),
+      $shadow-md;
+    border-color: color-mix(in srgb, var(--auth-card-border) 68%, var(--primary-color) 32%);
   }
 }
 
 .fileCardSelected {
-  border-color: var(--primary-color);
+  border-color: color-mix(in srgb, var(--auth-card-border) 44%, var(--primary-color) 56%);
   box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--auth-card-accent-shadow) 55%, transparent),
     0 0 0 1px color-mix(in srgb, var(--primary-color) 70%, transparent),
     0 14px 30px -24px color-mix(in srgb, var(--primary-color) 45%, transparent);
 
   &:hover {
-    border-color: var(--primary-color);
+    border-color: color-mix(in srgb, var(--auth-card-border) 36%, var(--primary-color) 64%);
   }
 }
 
@@ -872,7 +1005,7 @@
   &:hover {
     transform: none;
     box-shadow: none;
-    border-color: var(--border-color);
+    border-color: var(--auth-card-border);
   }
 }
 
@@ -908,7 +1041,7 @@
   }
 
   .cardHeaderContent {
-    gap: 3px;
+    gap: 2px;
   }
 
   .cardBadgeRow {
@@ -921,14 +1054,24 @@
     font-size: 10px;
   }
 
+  .headerMetaChip {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+
   .fileName {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.3;
     -webkit-line-clamp: 1;
   }
 
+  .fileNameRow {
+    gap: 6px;
+    align-items: center;
+  }
+
   .healthStatusMessage {
-    padding: 6px 8px;
+    padding: 5px 8px;
     border-radius: 8px;
     font-size: 10px;
   }
@@ -938,13 +1081,13 @@
   }
 
   .cardActions {
-    gap: 6px;
+    gap: 4px;
     padding-top: 0;
   }
 
   .cardActionsMain {
     width: 100%;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: nowrap;
   }
 
@@ -976,8 +1119,44 @@
     padding: 4px 6px;
   }
 
+  .statusToggleHeader {
+    width: auto;
+    flex: 0 0 auto;
+    margin-left: 0;
+    padding: 3px 5px;
+    gap: 4px;
+  }
+
   .statusToggleLabel {
     font-size: 10px;
+  }
+
+  .codexWeeklyLimitInline {
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 4px 6px;
+    gap: 6px;
+    border-radius: 10px;
+  }
+
+  .codexWeeklyLimitMeta {
+    gap: 3px;
+  }
+
+  .codexWeeklyLimitPercent {
+    font-size: 10px;
+  }
+
+  .codexWeeklyLimitDivider {
+    font-size: 10px;
+  }
+
+  .codexWeeklyLimitSummary {
+    font-size: 11px;
+  }
+
+  .codexWeeklyLimitBarWrap {
+    min-width: 0;
   }
 
   .modelsActionIconWrap {
@@ -989,6 +1168,13 @@
   .actionButtonLabel {
     font-size: 12px;
   }
+}
+
+:global([data-theme='dark']) .fileCard {
+  --auth-card-surface: color-mix(in srgb, var(--bg-primary) 98%, var(--bg-secondary) 2%);
+  --auth-card-border: color-mix(in srgb, var(--border-color) 88%, transparent);
+  --auth-card-accent-shadow: rgba(2, 6, 23, 0.34);
+  --auth-card-highlight: rgba(255, 255, 255, 0.05);
 }
 
 .fileCardLayout {
@@ -1056,6 +1242,28 @@
   gap: 8px;
 }
 
+.headerMetaChip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.headerMetaChipStrong {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--primary-color) 7%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--primary-color) 24%, var(--border-color));
+}
+
 .typeBadge {
   display: inline-flex;
   align-items: center;
@@ -1115,6 +1323,19 @@
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.fileNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fileNameRow .fileName {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .cardMeta {
@@ -1217,15 +1438,23 @@
 
 .healthStatusMessage {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 12px;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
   color: var(--warning-text);
   background-color: var(--warning-bg);
   border: 1px solid var(--warning-border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  word-break: break-word;
+  border-radius: 10px;
+  padding: 6px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.healthStatusMessage span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .messageIcon {
@@ -1244,8 +1473,8 @@
 }
 
 .cardInsightsCompact {
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 7px 8px;
   border-radius: 12px;
 }
 
@@ -1260,15 +1489,19 @@
 }
 
 .cardStatsCompact {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .cardStatsCompact .statPill {
+  flex: 1 1 92px;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 5px 8px;
+  border-radius: 10px;
 }
 
 .cardStatsCompact .statLabel {
@@ -1321,7 +1554,7 @@
 }
 
 .statusPanelCompact {
-  gap: 4px;
+  gap: 2px;
 }
 
 .statusPanelCompact .statusPanelLabel {
@@ -1330,8 +1563,8 @@
 
 .statusPanelCompact .statusBar {
   flex-wrap: wrap;
-  gap: 6px;
-  row-gap: 4px;
+  gap: 4px;
+  row-gap: 3px;
 }
 
 .statusPanelCompact .statusBlocks {
@@ -1344,7 +1577,7 @@
 
 .statusPanelCompact .statusRate {
   margin-left: auto;
-  padding: 4px 6px;
+  padding: 3px 6px;
   font-size: 10px;
 }
 
@@ -1606,16 +1839,16 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-top: auto;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .cardActionsMain {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -1686,6 +1919,11 @@
   background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
 }
 
+.statusToggleHeader {
+  align-self: flex-start;
+  margin-left: auto;
+}
+
 .statusToggleLabel {
   font-size: 12px;
   font-weight: 600;
@@ -1728,6 +1966,11 @@
   .statusToggle {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .statusToggleHeader {
+    width: auto;
+    justify-content: flex-start;
   }
 
   .fileCardCompact {

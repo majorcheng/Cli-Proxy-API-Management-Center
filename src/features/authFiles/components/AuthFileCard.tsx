@@ -17,6 +17,7 @@ import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/uti
 import { formatFileSize } from '@/utils/format';
 import {
   QUOTA_PROVIDER_TYPES,
+  formatModifiedCompact,
   formatModified,
   getAuthFileIcon,
   getAuthFileStatusMessage,
@@ -29,20 +30,19 @@ import {
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
-import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
+import { AuthFileCodexWeeklyLimitSection } from '@/features/authFiles/components/AuthFileCodexWeeklyLimitSection';
+import { resolveCodexWeeklyLimit } from '@/features/authFiles/codexWeeklyLimit';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'available']);
 
 export type AuthFileCardProps = {
   file: AuthFileItem;
-  compact: boolean;
   selected: boolean;
   resolvedTheme: ResolvedTheme;
   disableControls: boolean;
   deleting: string | null;
   statusUpdating: Record<string, boolean>;
-  quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
   statusBarCache: Map<string, AuthFileStatusBarData>;
   onShowModels: (file: AuthFileItem) => void;
@@ -63,13 +63,11 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const { t } = useTranslation();
   const {
     file,
-    compact,
     selected,
     resolvedTheme,
     disableControls,
     deleting,
     statusUpdating,
-    quotaFilterType,
     keyStats,
     statusBarCache,
     onShowModels,
@@ -83,15 +81,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const fileStats = resolveAuthFileStats(file, keyStats);
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
   const isAistudio = (file.type || '').toLowerCase() === 'aistudio';
-  const showModelsButton = !isRuntimeOnly || isAistudio;
+  const providerKey = resolveAuthProvider(file);
+  const isCodexAuthFile = providerKey === 'codex' && !isRuntimeOnly;
+  const showModelsButton = (!isRuntimeOnly || isAistudio) && !isCodexAuthFile;
   const typeColor = getTypeColor(file.type || 'unknown', resolvedTheme);
   const typeLabel = getTypeLabel(t, file.type || 'unknown');
   const providerIcon = getAuthFileIcon(file.type || 'unknown', resolvedTheme);
+  const codexWeeklyLimit = isCodexAuthFile ? resolveCodexWeeklyLimit(file) : null;
 
-  const quotaType =
-    quotaFilterType && resolveQuotaType(file) === quotaFilterType ? quotaFilterType : null;
-
-  const showQuotaLayout = Boolean(quotaType) && !isRuntimeOnly && !compact;
+  const quotaType = resolveQuotaType(file);
 
   const providerCardClass =
     quotaType === 'antigravity'
@@ -113,9 +111,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const rawStatusMessage = getAuthFileStatusMessage(file);
   const hasStatusWarning =
     Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase());
+  const showRawStatusMessage = hasStatusWarning && !codexWeeklyLimit?.is429Limited;
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
+  const modifiedCompact = formatModifiedCompact(file);
+  const fileSizeCompact = file.size ? formatFileSize(file.size) : '-';
+  const fileNameTitle = noteValue
+    ? `${file.name}\n${t('auth_files.note_display')}: ${noteValue}`
+    : file.name;
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual') || '虚拟认证文件'
     : file.disabled
@@ -135,7 +139,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   return (
     <div
-      className={`${styles.fileCard} ${compact ? styles.fileCardCompact : ''} ${providerCardClass} ${selected ? styles.fileCardSelected : ''} ${file.disabled ? styles.fileCardDisabled : ''}`}
+      className={`${styles.fileCard} ${styles.fileCardCompact} ${providerCardClass} ${selected ? styles.fileCardSelected : ''} ${file.disabled ? styles.fileCardDisabled : ''}`}
     >
       <div className={styles.fileCardLayout}>
         <div className={styles.fileCardMain}>
@@ -179,50 +183,58 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 >
                   {typeLabel}
                 </span>
+                <span
+                  className={styles.headerMetaChip}
+                  title={`${t('auth_files.file_size')}: ${fileSizeCompact}`}
+                >
+                  {fileSizeCompact}
+                </span>
+                <span
+                  className={styles.headerMetaChip}
+                  title={`${t('auth_files.file_modified')}: ${formatModified(file)}`}
+                >
+                  {modifiedCompact}
+                </span>
+                {priorityValue !== undefined && (
+                  <span
+                    className={`${styles.headerMetaChip} ${styles.headerMetaChipStrong}`}
+                    title={`${t('auth_files.priority_display')}: ${priorityValue}`}
+                  >
+                    P{priorityValue}
+                  </span>
+                )}
                 <span className={`${styles.stateBadge} ${stateBadgeClass}`}>{stateLabel}</span>
               </div>
-              <span className={styles.fileName} title={file.name}>
-                {file.name}
-              </span>
-              {!compact && noteValue && (
-                <div className={styles.noteText} title={noteValue}>
-                  <span className={styles.noteLabel}>{t('auth_files.note_display')}</span>
-                  <span className={styles.noteValue}>{noteValue}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className={`${styles.cardMeta} ${compact ? styles.cardMetaCompact : ''}`}>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>{t('auth_files.file_size')}</span>
-              <span className={styles.metaValue}>
-                {file.size ? formatFileSize(file.size) : '-'}
-              </span>
-            </div>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>{t('auth_files.file_modified')}</span>
-              <span className={styles.metaValue}>{formatModified(file)}</span>
-            </div>
-            {priorityValue !== undefined && (
-              <div className={`${styles.metaItem} ${styles.priorityBadge}`}>
-                <span className={styles.metaLabel}>{t('auth_files.priority_display')}</span>
-                <span className={`${styles.metaValue} ${styles.priorityValue}`}>
-                  {priorityValue}
+              <div className={styles.fileNameRow}>
+                <span className={styles.fileName} title={fileNameTitle}>
+                  {file.name}
                 </span>
+                {!isRuntimeOnly && (
+                  <div className={`${styles.statusToggle} ${styles.statusToggleHeader}`}>
+                    <span className={styles.statusToggleLabel}>
+                      {t('auth_files.status_toggle_label')}
+                    </span>
+                    <ToggleSwitch
+                      ariaLabel={t('auth_files.status_toggle_label')}
+                      checked={!file.disabled}
+                      disabled={disableControls || statusUpdating[file.name] === true}
+                      onChange={(value) => onToggleStatus(file, value)}
+                    />
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
-          {rawStatusMessage && hasStatusWarning && (
+          {showRawStatusMessage && hasStatusWarning && (
             <div className={styles.healthStatusMessage} title={rawStatusMessage}>
               <IconInfo className={styles.messageIcon} size={14} />
               <span>{rawStatusMessage}</span>
             </div>
           )}
 
-          <div className={`${styles.cardInsights} ${compact ? styles.cardInsightsCompact : ''}`}>
-            <div className={`${styles.cardStats} ${compact ? styles.cardStatsCompact : ''}`}>
+          <div className={`${styles.cardInsights} ${styles.cardInsightsCompact}`}>
+            <div className={`${styles.cardStats} ${styles.cardStatsCompact}`}>
               <div className={`${styles.statPill} ${styles.statSuccess}`}>
                 <span className={styles.statLabel}>{t('stats.success')}</span>
                 <span className={styles.statValue}>{fileStats.success}</span>
@@ -233,24 +245,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
               </div>
             </div>
 
-            <div className={`${styles.statusPanel} ${compact ? styles.statusPanelCompact : ''}`}>
+            <div className={`${styles.statusPanel} ${styles.statusPanelCompact}`}>
               <div className={styles.statusPanelLabel}>
                 <span>{t('auth_files.health_status_label')}</span>
               </div>
               <ProviderStatusBar statusData={statusData} styles={styles} />
             </div>
-
-            {showQuotaLayout && quotaType && (
-              <AuthFileQuotaSection
-                file={file}
-                quotaType={quotaType}
-                disableControls={disableControls}
-              />
-            )}
           </div>
 
           <div className={styles.cardActions}>
             <div className={styles.cardActionsMain}>
+              {isCodexAuthFile && <AuthFileCodexWeeklyLimitSection file={file} />}
               {showModelsButton && (
                 <Button
                   variant="secondary"
@@ -309,19 +314,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 </div>
               )}
             </div>
-            {!isRuntimeOnly && (
-              <div className={styles.statusToggle}>
-                <span className={styles.statusToggleLabel}>
-                  {t('auth_files.status_toggle_label')}
-                </span>
-                <ToggleSwitch
-                  ariaLabel={t('auth_files.status_toggle_label')}
-                  checked={!file.disabled}
-                  disabled={disableControls || statusUpdating[file.name] === true}
-                  onChange={(value) => onToggleStatus(file, value)}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -334,6 +334,21 @@
   }
 }
 
+// 小时级图表同排展示，桌面端便于横向对比，窄屏自动回落为单列
+.hourlyChartsGrid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @include tablet {
+    grid-template-columns: 1fr;
+  }
+
+  @include mobile {
+    gap: 16px;
+  }
+}
+
 // 统计表格网格
 .statsGrid {
   display: grid;

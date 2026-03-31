@@ -1,9 +1,15 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getTimeRangeBounds, parseDateInputValue, type DateRange } from '@/utils/monitor';
+import {
+  MONITOR_PRESET_TIME_RANGES,
+  getTimeRangeBounds,
+  parseDateInputValue,
+  type DateRange,
+  type PresetTimeRange,
+} from '@/utils/monitor';
 import styles from '@/pages/MonitorPage.module.scss';
 
-export type TimeRange = 1 | 7 | 14 | 30 | 'custom';
+export type TimeRange = PresetTimeRange | 'custom';
 
 interface TimeRangeSelectorProps {
   value: TimeRange;
@@ -13,6 +19,7 @@ interface TimeRangeSelectorProps {
 
 export function TimeRangeSelector({ value, onChange, customRange }: TimeRangeSelectorProps) {
   const { t } = useTranslation();
+  const timeRanges: readonly TimeRange[] = [...MONITOR_PRESET_TIME_RANGES, 'custom'];
   const [showCustom, setShowCustom] = useState(value === 'custom');
   const [startDate, setStartDate] = useState(() => {
     if (customRange?.start) {
@@ -60,7 +67,7 @@ export function TimeRangeSelector({ value, onChange, customRange }: TimeRangeSel
   return (
     <div className={styles.timeRangeSelector}>
       <div className={styles.timeButtons}>
-        {([1, 7, 14, 30, 'custom'] as TimeRange[]).map((range) => (
+        {timeRanges.map((range) => (
           <button
             key={range}
             className={`${styles.timeButton} ${value === range ? styles.active : ''}`}
@@ -68,6 +75,8 @@ export function TimeRangeSelector({ value, onChange, customRange }: TimeRangeSel
           >
             {range === 1
               ? t('monitor.time.today')
+              : range === 'yesterday'
+              ? t('monitor.time.yesterday')
               : range === 'custom'
               ? t('monitor.time.custom')
               : t('monitor.time.last_n_days', { n: range })}
@@ -133,6 +142,9 @@ export function formatTimeRangeCaption(
   }
   if (range === 1) {
     return t ? t('monitor.time.today') : '今天';
+  }
+  if (range === 'yesterday') {
+    return t ? t('monitor.time.yesterday') : '昨天';
   }
   return t ? t('monitor.time.last_n_days', { n: range }) : `最近 ${range} 天`;
 }

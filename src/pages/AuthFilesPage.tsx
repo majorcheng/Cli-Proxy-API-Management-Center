@@ -48,20 +48,16 @@ import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAut
 import { useAuthFilesStats } from '@/features/authFiles/hooks/useAuthFilesStats';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import {
-  DEFAULT_AUTH_FILES_COMPACT_MODE,
   isAuthFilesSortMode,
   readAuthFilesUiState,
-  resolveAuthFilesCompactMode,
+  resolvePersistedAuthFilesPageSize,
   writeAuthFilesUiState,
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
 import {
-  DEFAULT_COMPACT_CARD_PAGE_SIZE,
-  DEFAULT_REGULAR_CARD_PAGE_SIZE,
   MAX_CARD_PAGE_SIZE,
   MIN_CARD_PAGE_SIZE,
   clampCardPageSize,
-  resolveAuthFilesPageSize,
 } from '@/features/authFiles/pageSize';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
 import styles from './AuthFilesPage.module.scss';
@@ -83,14 +79,10 @@ export function AuthFilesPage() {
   const [filter, setFilter] = useState<'all' | string>('all');
   const [problemOnly, setProblemOnly] = useState(false);
   const [disabledOnly, setDisabledOnly] = useState(false);
-  const [compactMode, setCompactMode] = useState(DEFAULT_AUTH_FILES_COMPACT_MODE);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSizeByMode, setPageSizeByMode] = useState({
-    regular: DEFAULT_REGULAR_CARD_PAGE_SIZE,
-    compact: DEFAULT_COMPACT_CARD_PAGE_SIZE,
-  });
-  const [pageSizeInput, setPageSizeInput] = useState(String(DEFAULT_COMPACT_CARD_PAGE_SIZE));
+  const [pageSize, setPageSize] = useState(resolvePersistedAuthFilesPageSize(null));
+  const [pageSizeInput, setPageSizeInput] = useState(String(resolvePersistedAuthFilesPageSize(null)));
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
@@ -179,7 +171,6 @@ export function AuthFilesPage() {
   )
     ? (normalizedFilter as QuotaProviderType)
     : null;
-  const pageSize = compactMode ? pageSizeByMode.compact : pageSizeByMode.regular;
 
   useEffect(() => {
     const persisted = readAuthFilesUiState();
@@ -194,29 +185,13 @@ export function AuthFilesPage() {
     if (typeof persisted.disabledOnly === 'boolean') {
       setDisabledOnly(persisted.disabledOnly);
     }
-    setCompactMode(resolveAuthFilesCompactMode(persisted));
     if (typeof persisted.search === 'string') {
       setSearch(persisted.search);
     }
     if (typeof persisted.page === 'number' && Number.isFinite(persisted.page)) {
       setPage(Math.max(1, Math.round(persisted.page)));
     }
-    const legacyPageSize =
-      typeof persisted.pageSize === 'number' && Number.isFinite(persisted.pageSize)
-        ? resolveAuthFilesPageSize(persisted.pageSize, DEFAULT_COMPACT_CARD_PAGE_SIZE)
-        : null;
-    const regularPageSize =
-      typeof persisted.regularPageSize === 'number' && Number.isFinite(persisted.regularPageSize)
-        ? resolveAuthFilesPageSize(persisted.regularPageSize, DEFAULT_REGULAR_CARD_PAGE_SIZE)
-        : legacyPageSize ?? DEFAULT_REGULAR_CARD_PAGE_SIZE;
-    const compactPageSize =
-      typeof persisted.compactPageSize === 'number' && Number.isFinite(persisted.compactPageSize)
-        ? resolveAuthFilesPageSize(persisted.compactPageSize, DEFAULT_COMPACT_CARD_PAGE_SIZE)
-        : legacyPageSize ?? DEFAULT_COMPACT_CARD_PAGE_SIZE;
-    setPageSizeByMode({
-      regular: regularPageSize,
-      compact: compactPageSize,
-    });
+    setPageSize(resolvePersistedAuthFilesPageSize(persisted));
     if (isAuthFilesSortMode(persisted.sortMode)) {
       setSortMode(persisted.sortMode);
     }
@@ -227,28 +202,16 @@ export function AuthFilesPage() {
       filter,
       problemOnly,
       disabledOnly,
-      compactMode,
       search,
       page,
       pageSize,
-      regularPageSize: pageSizeByMode.regular,
-      compactPageSize: pageSizeByMode.compact,
       sortMode,
     });
-  }, [filter, problemOnly, disabledOnly, compactMode, search, page, pageSize, pageSizeByMode, sortMode]);
+  }, [filter, problemOnly, disabledOnly, search, page, pageSize, sortMode]);
 
   useEffect(() => {
     setPageSizeInput(String(pageSize));
   }, [pageSize]);
-
-  const setCurrentModePageSize = useCallback(
-    (next: number) => {
-      setPageSizeByMode((current) =>
-        compactMode ? { ...current, compact: next } : { ...current, regular: next }
-      );
-    },
-    [compactMode]
-  );
 
   const commitPageSizeInput = (rawValue: string) => {
     const trimmed = rawValue.trim();
@@ -264,7 +227,7 @@ export function AuthFilesPage() {
     }
 
     const next = clampCardPageSize(value);
-    setCurrentModePageSize(next);
+    setPageSize(next);
     setPageSizeInput(String(next));
     setPage(1);
   };
@@ -282,7 +245,7 @@ export function AuthFilesPage() {
     const rounded = Math.round(parsed);
     if (rounded < MIN_CARD_PAGE_SIZE || rounded > MAX_CARD_PAGE_SIZE) return;
 
-    setCurrentModePageSize(rounded);
+    setPageSize(rounded);
     setPage(1);
   };
 
@@ -763,18 +726,6 @@ export function AuthFilesPage() {
                         }
                       />
                     </div>
-                    <div className={styles.filterToggleCard}>
-                      <ToggleSwitch
-                        checked={compactMode}
-                        onChange={(value) => setCompactMode(value)}
-                        ariaLabel={t('auth_files.compact_mode_label')}
-                        label={
-                          <span className={styles.filterToggleLabel}>
-                            {t('auth_files.compact_mode_label')}
-                          </span>
-                        }
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -789,19 +740,17 @@ export function AuthFilesPage() {
               />
             ) : (
               <div
-                className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''} ${compactMode ? styles.fileGridCompact : ''}`}
+                className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''} ${styles.fileGridCompact}`}
               >
                 {pageItems.map((file) => (
                   <AuthFileCard
                     key={file.name}
                     file={file}
-                    compact={compactMode}
                     selected={selectedFiles.has(file.name)}
                     resolvedTheme={resolvedTheme}
                     disableControls={disableControls}
                     deleting={deleting}
                     statusUpdating={statusUpdating}
-                    quotaFilterType={quotaFilterType}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
                     onShowModels={showModels}

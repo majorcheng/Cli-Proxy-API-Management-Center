@@ -6,7 +6,6 @@ import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
 import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
 import { resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
-import { TimeRangeSelector, formatTimeRangeCaption, type TimeRange } from './TimeRangeSelector';
 import {
   maskSecret,
   formatProviderDisplay,
@@ -14,7 +13,7 @@ import {
   getRateClassName,
   getProviderDisplayParts,
   filterDataByTimeRange,
-  type DateRange,
+  type PresetTimeRange,
 } from '@/utils/monitor';
 import type { UsageData } from '@/pages/MonitorPage';
 import styles from '@/pages/MonitorPage.module.scss';
@@ -22,6 +21,7 @@ import styles from '@/pages/MonitorPage.module.scss';
 interface RequestLogsProps {
   data: UsageData | null;
   loading: boolean;
+  timeRange: PresetTimeRange;
   providerMap: Record<string, string>;
   providerTypeMap: Record<string, string>;
   sourceInfoMap: Map<string, SourceInfo>;
@@ -63,7 +63,7 @@ interface PrecomputedStats {
 // 请求日志仅展示最近 36 条，避免页面出现双层纵向滚动
 const MAX_VISIBLE_LOGS = 36;
 
-export function RequestLogs({ data, loading: parentLoading, providerMap, providerTypeMap, sourceInfoMap, authFileMap: propAuthFileMap, apiFilter }: RequestLogsProps) {
+export function RequestLogs({ data, loading: parentLoading, timeRange, providerMap, providerTypeMap, sourceInfoMap, authFileMap: propAuthFileMap, apiFilter }: RequestLogsProps) {
   const { t } = useTranslation();
   const [filterApi, setFilterApi] = useState('');
   const [filterModel, setFilterModel] = useState('');
@@ -76,10 +76,6 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
   // 用 ref 存储 fetchLogData，避免作为定时器 useEffect 的依赖
   const fetchLogDataRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
-  // 时间范围状态
-  const [timeRange, setTimeRange] = useState<TimeRange>(1);
-  const [customRange, setCustomRange] = useState<DateRange | undefined>();
-
   // 日志独立数据状态
   const [logData, setLogData] = useState<UsageData | null>(null);
   const [logLoading, setLogLoading] = useState(false);
@@ -88,14 +84,6 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
   // 认证文件映射（优先使用 prop，否则自行加载）
   const [localAuthFileMap, setLocalAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
   const authFileMap = propAuthFileMap?.size ? propAuthFileMap : localAuthFileMap;
-
-  // 处理时间范围变化
-  const handleTimeRangeChange = useCallback((range: TimeRange, custom?: DateRange) => {
-    setTimeRange(range);
-    if (custom) {
-      setCustomRange(custom);
-    }
-  }, []);
 
   // 使用日志独立数据或父组件数据
   const effectiveData = logData || data;
@@ -141,13 +129,13 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
     try {
       const response = await usageApi.getUsage();
       const usageData = (response?.usage ?? response) as UsageData;
-      setLogData(filterDataByTimeRange(usageData, timeRange, customRange, apiFilter));
+      setLogData(filterDataByTimeRange(usageData, timeRange, undefined, apiFilter));
     } catch (err) {
       console.error('日志刷新失败：', err);
     } finally {
       setLogLoading(false);
     }
-  }, [timeRange, customRange, apiFilter]);
+  }, [timeRange, apiFilter]);
 
   // 同步 fetchLogData 到 ref，确保定时器始终调用最新版本
   useEffect(() => {
@@ -192,16 +180,18 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
     };
   }, [autoRefresh]);
 
-  // 时间范围变化时立即刷新数据（跳过初次挂载，初次使用父组件数据）
+  // 页面时间范围或 API 过滤变化时，日志卡片同步刷新自身数据；
+  // 先清空局部缓存，优先回落到父组件已经算好的 filteredData，避免短暂展示旧范围数据。
   const skipInitialFetch = useRef(true);
   useEffect(() => {
     if (skipInitialFetch.current) {
       skipInitialFetch.current = false;
       return;
     }
+    setLogData(null);
     fetchLogData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange, customRange]);
+  }, [timeRange, apiFilter]);
 
   // 获取倒计时显示文本
   const getCountdownText = () => {
@@ -457,16 +447,9 @@ export function RequestLogs({ data, loading: parentLoading, providerMap, provide
         title={t('monitor.logs.title')}
         subtitle={
           <span>
-            {formatTimeRangeCaption(timeRange, customRange, t)} · {t('monitor.logs.total_count', { count: visibleEntries.length })}
+            {t('monitor.logs.total_count', { count: visibleEntries.length })}
             <span style={{ color: 'var(--text-tertiary)' }}> · {t('monitor.logs.scroll_hint')}</span>
           </span>
-        }
-        extra={
-          <TimeRangeSelector
-            value={timeRange}
-            onChange={handleTimeRangeChange}
-            customRange={customRange}
-          />
         }
       >
         {/* 筛选器 */}

@@ -201,9 +201,23 @@ export function createDisableState(
 }
 
 /**
+ * 监控中心预设时间范围
+ * - 1: 今天
+ * - yesterday: 昨天
+ * - 7/14/30: 最近 N 天（包含今天）
+ */
+export type PresetTimeRange = 1 | 'yesterday' | 7 | 14 | 30;
+
+/**
+ * 监控中心时间范围按钮顺序
+ * “昨天”固定紧跟在“今天”后，避免页面与卡片内部顺序不一致。
+ */
+export const MONITOR_PRESET_TIME_RANGES: readonly PresetTimeRange[] = [1, 'yesterday', 7, 14, 30];
+
+/**
  * 时间范围类型
  */
-export type TimeRangeValue = number | 'custom';
+export type TimeRangeValue = PresetTimeRange | 'custom';
 
 /**
  * 计算时间范围的起止边界
@@ -225,6 +239,17 @@ export function getTimeRangeBounds(
     };
   }
 
+  if (timeRange === 'yesterday') {
+    const start = new Date(now.getTime());
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - 1);
+
+    const end = new Date(start.getTime());
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+  }
+
   const normalizedRange = typeof timeRange === 'number' && timeRange > 0 ? timeRange : 7;
   const start = new Date(now.getTime());
   start.setHours(0, 0, 0, 0);
@@ -234,6 +259,25 @@ export function getTimeRangeBounds(
   end.setHours(23, 59, 59, 999);
 
   return { start, end };
+}
+
+/**
+ * 格式化监控中心预设时间范围标签
+ * 顶部页签、KPI 卡片、分布图等都复用这一套文案，避免“昨天”支持出现分叉。
+ */
+export function formatPresetTimeRangeLabel(
+  range: PresetTimeRange,
+  t?: (key: string, options?: Record<string, unknown>) => string
+): string {
+  if (range === 1) {
+    return t ? t('monitor.today') : '今天';
+  }
+
+  if (range === 'yesterday') {
+    return t ? t('monitor.yesterday') : '昨天';
+  }
+
+  return t ? t('monitor.last_n_days', { n: range }) : `最近 ${range} 天`;
 }
 
 /**

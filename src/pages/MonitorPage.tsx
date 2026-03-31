@@ -20,7 +20,13 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useThemeStore } from '@/stores';
 import { usageApi, providersApi, authFilesApi } from '@/services/api';
-import { filterDataByApiFilter, filterDataByTimeRange } from '@/utils/monitor';
+import {
+  MONITOR_PRESET_TIME_RANGES,
+  filterDataByApiFilter,
+  filterDataByTimeRange,
+  formatPresetTimeRangeLabel,
+  type PresetTimeRange,
+} from '@/utils/monitor';
 import { buildSourceInfoMap } from '@/utils/sourceResolver';
 import { normalizeAuthIndex } from '@/utils/usage';
 import type { CredentialInfo } from '@/types/sourceInfo';
@@ -29,6 +35,7 @@ import { ModelDistributionChart } from '@/components/monitor/ModelDistributionCh
 import { DailyTrendChart } from '@/components/monitor/DailyTrendChart';
 import { HourlyModelChart } from '@/components/monitor/HourlyModelChart';
 import { HourlyTokenChart } from '@/components/monitor/HourlyTokenChart';
+import { ServiceHealthCard } from '@/components/usage/ServiceHealthCard';
 import { ChannelStats } from '@/components/monitor/ChannelStats';
 import { FailureAnalysis } from '@/components/monitor/FailureAnalysis';
 import { RequestLogs } from '@/components/monitor/RequestLogs';
@@ -49,9 +56,6 @@ ChartJS.register(
   Legend,
   Filler
 );
-
-// 时间范围选项
-type TimeRange = 1 | 7 | 14 | 30;
 
 export interface UsageDetail {
   timestamp: string;
@@ -86,7 +90,7 @@ export function MonitorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>(1);
+  const [timeRange, setTimeRange] = useState<PresetTimeRange>(1);
   const [apiFilter, setApiFilter] = useState('');
   const [providerMap, setProviderMap] = useState<Record<string, string>>({});
   const [providerModels, setProviderModels] = useState<Record<string, Set<string>>>({});
@@ -283,7 +287,7 @@ export function MonitorPage() {
   }, [apiFilteredData]);
 
   // 处理时间范围变化
-  const handleTimeRangeChange = (range: TimeRange) => {
+  const handleTimeRangeChange = (range: PresetTimeRange) => {
     setTimeRange(range);
   };
 
@@ -326,13 +330,13 @@ export function MonitorPage() {
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t('monitor.time_range')}</span>
           <div className={styles.timeButtons}>
-            {([1, 7, 14, 30] as TimeRange[]).map((range) => (
+            {MONITOR_PRESET_TIME_RANGES.map((range) => (
               <button
                 key={range}
                 className={`${styles.timeButton} ${timeRange === range ? styles.active : ''}`}
                 onClick={() => handleTimeRangeChange(range)}
               >
-                {range === 1 ? t('monitor.today') : t('monitor.last_n_days', { n: range })}
+                {formatPresetTimeRangeLabel(range, t)}
               </button>
             ))}
           </div>
@@ -361,9 +365,14 @@ export function MonitorPage() {
         <DailyTrendChart data={dailyTrendData} loading={loading} isDark={isDark} timeRange={30} />
       </div>
 
-      {/* 小时级图表 */}
-      <HourlyModelChart data={apiFilteredData} loading={loading} isDark={isDark} />
-      <HourlyTokenChart data={apiFilteredData} loading={loading} isDark={isDark} />
+      {/* 小时级图表同排展示，便于直接横向对比请求分布与 Token 峰值 */}
+      <div className={styles.hourlyChartsGrid}>
+        <HourlyModelChart data={apiFilteredData} loading={loading} isDark={isDark} />
+        <HourlyTokenChart data={apiFilteredData} loading={loading} isDark={isDark} />
+      </div>
+
+      {/* 服务健康监测搬到监控中心，保持原有最近 7 天语义，仅受 API 筛选影响 */}
+      <ServiceHealthCard usage={apiFilteredData} loading={loading} />
 
       {/* 统计表格 */}
       <div className={styles.statsGrid}>
@@ -375,6 +384,7 @@ export function MonitorPage() {
       <RequestLogs
         data={filteredData}
         loading={loading}
+        timeRange={timeRange}
         providerMap={providerMap}
         providerTypeMap={providerTypeMap}
         sourceInfoMap={sourceInfoMap}

@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UsageData } from '@/pages/MonitorPage';
+import { formatPresetTimeRangeLabel, type PresetTimeRange } from '@/utils/monitor';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface KpiCardsProps {
   data: UsageData | null;
   loading: boolean;
-  timeRange: number;
+  timeRange: PresetTimeRange;
   authFileTotal: number | null;
 }
 
@@ -114,9 +115,7 @@ export function KpiCards({ data, loading, timeRange, authFileTotal }: KpiCardsPr
     };
   }, [data]);
 
-  const timeRangeLabel = timeRange === 1
-    ? t('monitor.today')
-    : t('monitor.last_n_days', { n: timeRange });
+  const timeRangeLabel = formatPresetTimeRangeLabel(timeRange, t);
 
   return (
     <div className={styles.kpiGrid}>
