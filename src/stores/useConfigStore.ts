@@ -267,7 +267,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       // 同时清除完整配置缓存
       newCache.delete('__full__');
 
-      set({ cache: newCache });
+      // section 级更新通常发生在 optimistic write 之后，这里需要让更早发出的全量请求失效，
+      // 避免旧响应晚到后把页面上刚更新的局部配置覆盖回去。
+      configRequestToken += 1;
+      inFlightConfigRequest = null;
+
+      set({ cache: newCache, loading: false, error: null });
       return;
     } else {
       newCache.clear();

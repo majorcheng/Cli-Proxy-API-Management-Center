@@ -10,6 +10,7 @@ import { STORAGE_KEY_AUTH } from '@/utils/constants';
 import { secureStorage } from '@/services/storage/secureStorage';
 import { apiClient } from '@/services/api/client';
 import { useConfigStore } from './useConfigStore';
+import { useModelsStore } from './useModelsStore';
 import { useUsageStatsStore } from './useUsageStatsStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
 
@@ -94,6 +95,7 @@ export const useAuthStore = create<AuthStoreState>()(
 
         try {
           set({ connectionStatus: 'connecting' });
+          useModelsStore.getState().clearCache();
 
           // 配置 API 客户端
           apiClient.setConfig({
@@ -137,6 +139,7 @@ export const useAuthStore = create<AuthStoreState>()(
       logout: () => {
         restoreSessionPromise = null;
         useConfigStore.getState().clearCache();
+        useModelsStore.getState().clearCache();
         useUsageStatsStore.getState().clearUsageStats();
         set({
           isAuthenticated: false,

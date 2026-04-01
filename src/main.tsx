@@ -5,6 +5,9 @@ import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import App from './App.tsx';
 
 document.title = 'CLI Proxy API Management Center';
+// 防止浏览器自动翻译修改应用壳节点，导致按钮/布局被意外篡改。
+document.documentElement.setAttribute('translate', 'no');
+document.documentElement.classList.add('notranslate');
 
 const faviconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
 if (faviconEl) {

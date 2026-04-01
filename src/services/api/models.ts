@@ -5,6 +5,7 @@
 import axios from 'axios';
 import { normalizeModelList } from '@/utils/models';
 import { normalizeApiBase } from '@/utils/connection';
+import { hasHeader } from '@/utils/headers';
 import { apiCallApi, getApiCallErrorMessage } from './apiCall';
 
 const DEFAULT_CLAUDE_BASE_URL = 'https://api.anthropic.com';
@@ -65,11 +66,6 @@ const stripGeminiModelResourceName = (value: string): string => {
   return trimmed.replace(/^\/?models\//i, '');
 };
 
-const hasHeader = (headers: Record<string, string>, name: string) => {
-  const target = name.toLowerCase();
-  return Object.keys(headers).some((key) => key.toLowerCase() === target);
-};
-
 const resolveBearerTokenFromAuthorization = (headers: Record<string, string>): string => {
   const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === 'authorization');
   if (!entry) return '';
@@ -90,7 +86,7 @@ export const modelsApi = {
     }
 
     const resolvedHeaders = { ...headers };
-    if (apiKey) {
+    if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
       resolvedHeaders.Authorization = `Bearer ${apiKey}`;
     }
 
@@ -116,8 +112,7 @@ export const modelsApi = {
     }
 
     const resolvedHeaders = { ...headers };
-    const hasAuthHeader = Boolean(resolvedHeaders.Authorization || resolvedHeaders.authorization);
-    if (apiKey && !hasAuthHeader) {
+    if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
       resolvedHeaders.Authorization = `Bearer ${apiKey}`;
     }
 
@@ -149,8 +144,7 @@ export const modelsApi = {
     }
 
     const resolvedHeaders = { ...headers };
-    const hasAuthHeader = Boolean(resolvedHeaders.Authorization || resolvedHeaders.authorization);
-    if (apiKey && !hasAuthHeader) {
+    if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
       resolvedHeaders.Authorization = `Bearer ${apiKey}`;
     }
 
