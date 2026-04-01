@@ -62,11 +62,11 @@ jobs:
         env:
           VERSION: ${{ steps.meta.outputs.tag }}
 
-      - name: Prepare release assets
+      - name: Verify release assets
         run: |
-          cd dist
-          mv index.html management.html
-          ls -lh management.html
+          test -f dist/index.html
+          test -f dist/management.html
+          ls -lh dist/index.html dist/management.html
 
       - name: Generate release notes
         if: github.event_name == 'push'

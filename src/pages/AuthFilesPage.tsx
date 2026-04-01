@@ -45,6 +45,7 @@ import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
+import { compareAuthFilesByDefaultSort } from '@/features/authFiles/sort';
 import { useAuthFilesStats } from '@/features/authFiles/hooks/useAuthFilesStats';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import {
@@ -331,13 +332,7 @@ export function AuthFilesPage() {
   const sorted = useMemo(() => {
     const copy = [...filtered];
     if (sortMode === 'default') {
-      copy.sort((a, b) => {
-        const providerA = normalizeProviderKey(String(a.provider ?? a.type ?? 'unknown'));
-        const providerB = normalizeProviderKey(String(b.provider ?? b.type ?? 'unknown'));
-        const providerCompare = providerA.localeCompare(providerB);
-        if (providerCompare !== 0) return providerCompare;
-        return a.name.localeCompare(b.name);
-      });
+      copy.sort(compareAuthFilesByDefaultSort);
     } else if (sortMode === 'az') {
       copy.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortMode === 'priority') {
