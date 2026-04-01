@@ -457,6 +457,7 @@
     "file_size": "Размер",
     "file_modified": "Изменён",
     "health_status_label": "Состояние",
+    "tokens_used": "Использовано токенов",
     "health_status_healthy": "Нормально",
     "health_status_warning": "Предупреждение",
     "health_status_disabled": "Отключено",

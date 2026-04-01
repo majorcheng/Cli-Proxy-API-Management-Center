@@ -461,6 +461,7 @@
     "file_size": "Size",
     "file_modified": "Modified",
     "health_status_label": "Health",
+    "tokens_used": "Used Tokens",
     "health_status_healthy": "Healthy",
     "health_status_warning": "Warning",
     "health_status_disabled": "Disabled",

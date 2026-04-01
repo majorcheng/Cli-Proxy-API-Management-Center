@@ -1547,6 +1547,12 @@
   border-color: var(--failure-badge-border);
 }
 
+.statTokens {
+  background: color-mix(in srgb, var(--primary-color) 14%, var(--bg-secondary));
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--primary-color) 32%, var(--border-color));
+}
+
 .statusPanel {
   display: flex;
   flex-direction: column;

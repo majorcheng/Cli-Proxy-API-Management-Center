@@ -233,7 +233,7 @@ export function isRuntimeOnlyAuthFile(file: AuthFileItem): boolean {
 }
 
 export function resolveAuthFileStats(file: AuthFileItem, stats: KeyStats): KeyStatBucket {
-  const defaultStats: KeyStatBucket = { success: 0, failure: 0 };
+  const defaultStats: KeyStatBucket = { success: 0, failure: 0, totalTokens: 0 };
   const rawFileName = file?.name || '';
 
   // 兼容 auth_index 和 authIndex 两种字段名（API 返回的是 auth_index）
@@ -249,7 +249,9 @@ export function resolveAuthFileStats(file: AuthFileItem, stats: KeyStats): KeySt
   const fileNameId = rawFileName ? normalizeUsageSourceId(rawFileName) : '';
   if (fileNameId && stats.bySource?.[fileNameId]) {
     const fromName = stats.bySource[fileNameId];
-    if (fromName.success > 0 || fromName.failure > 0) {
+    // 认证文件卡牌上的成功/失败/Token 用量必须走同一套匹配口径，
+    // 否则会出现“请求数来自 auth_index，但 Token 来自 source”的展示漂移。
+    if (fromName.success > 0 || fromName.failure > 0 || fromName.totalTokens > 0) {
       return fromName;
     }
   }
@@ -262,7 +264,9 @@ export function resolveAuthFileStats(file: AuthFileItem, stats: KeyStats): KeySt
       const fromNameWithoutExt = nameWithoutExtId ? stats.bySource?.[nameWithoutExtId] : undefined;
       if (
         fromNameWithoutExt &&
-        (fromNameWithoutExt.success > 0 || fromNameWithoutExt.failure > 0)
+        (fromNameWithoutExt.success > 0 ||
+          fromNameWithoutExt.failure > 0 ||
+          fromNameWithoutExt.totalTokens > 0)
       ) {
         return fromNameWithoutExt;
       }

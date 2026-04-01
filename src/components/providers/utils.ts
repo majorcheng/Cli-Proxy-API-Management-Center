@@ -94,19 +94,21 @@ export const getStatsBySource = (
   const bySource = keyStats.bySource ?? {};
   const candidates = buildCandidateUsageSourceIds({ apiKey, prefix });
   if (!candidates.length) {
-    return { success: 0, failure: 0 };
+    return { success: 0, failure: 0, totalTokens: 0 };
   }
 
   let success = 0;
   let failure = 0;
+  let totalTokens = 0;
   candidates.forEach((candidate) => {
     const stats = bySource[candidate];
     if (!stats) return;
     success += stats.success;
     failure += stats.failure;
+    totalTokens += stats.totalTokens;
   });
 
-  return { success, failure };
+  return { success, failure, totalTokens };
 };
 
 // 对于 OpenAI 提供商，汇总所有 apiKeyEntries 的统计 - 与旧版逻辑一致
@@ -125,14 +127,16 @@ export const getOpenAIProviderStats = (
 
   let success = 0;
   let failure = 0;
+  let totalTokens = 0;
   sourceIds.forEach((id) => {
     const stats = bySource[id];
     if (!stats) return;
     success += stats.success;
     failure += stats.failure;
+    totalTokens += stats.totalTokens;
   });
 
-  return { success, failure };
+  return { success, failure, totalTokens };
 };
 
 export const buildApiKeyEntry = (input?: Partial<ApiKeyEntry>): ApiKeyEntry => ({

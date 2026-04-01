@@ -13,7 +13,12 @@ import {
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import type { AuthFileItem } from '@/types';
 import { resolveAuthProvider } from '@/utils/quota';
-import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/utils/usage';
+import {
+  calculateStatusBarData,
+  formatCompactNumber,
+  normalizeAuthIndex,
+  type KeyStats
+} from '@/utils/usage';
 import { formatFileSize } from '@/utils/format';
 import {
   QUOTA_PROVIDER_TYPES,
@@ -120,6 +125,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const fileNameTitle = noteValue
     ? `${file.name}\n${t('auth_files.note_display')}: ${noteValue}`
     : file.name;
+  const usedTokensTitle = `${t('auth_files.tokens_used')}: ${fileStats.totalTokens.toLocaleString()}`;
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual') || '虚拟认证文件'
     : file.disabled
@@ -242,6 +248,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
               <div className={`${styles.statPill} ${styles.statFailure}`}>
                 <span className={styles.statLabel}>{t('stats.failure')}</span>
                 <span className={styles.statValue}>{fileStats.failure}</span>
+              </div>
+              <div className={`${styles.statPill} ${styles.statTokens}`} title={usedTokensTitle}>
+                <span className={styles.statLabel}>{t('auth_files.tokens_used')}</span>
+                <span className={styles.statValue}>{formatCompactNumber(fileStats.totalTokens)}</span>
               </div>
             </div>
 

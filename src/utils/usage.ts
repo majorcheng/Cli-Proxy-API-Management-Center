@@ -9,6 +9,7 @@ import { maskApiKey } from './format';
 export interface KeyStatBucket {
   success: number;
   failure: number;
+  totalTokens: number;
 }
 
 export interface KeyStats {
@@ -108,6 +109,12 @@ const toUsageSummaryFields = (summary: UsageSummary) => ({
   success_count: summary.successCount,
   failure_count: summary.failureCount,
   total_tokens: summary.totalTokens
+});
+
+const createEmptyKeyStatBucket = (): KeyStatBucket => ({
+  success: 0,
+  failure: 0,
+  totalTokens: 0
 });
 
 export function filterUsageByTimeRange<T>(usageData: T, range: UsageTimeRange, nowMs: number = Date.now()): T {
@@ -1461,7 +1468,7 @@ export function computeKeyStats(usageData: unknown, masker: (val: string) => str
 
   const ensureBucket = (bucket: Record<string, KeyStatBucket>, key: string) => {
     if (!bucket[key]) {
-      bucket[key] = { success: 0, failure: 0 };
+      bucket[key] = createEmptyKeyStatBucket();
     }
     return bucket[key];
   };
@@ -1481,6 +1488,7 @@ export function computeKeyStats(usageData: unknown, masker: (val: string) => str
         const source = normalizeUsageSourceId(detailRecord?.source, masker);
         const authIndexKey = normalizeAuthIndex(detailRecord?.auth_index);
         const isFailed = detailRecord?.failed === true;
+        const totalTokens = extractTotalTokens(detailRecord);
 
         if (source) {
           const bucket = ensureBucket(sourceStats, source);
@@ -1489,6 +1497,7 @@ export function computeKeyStats(usageData: unknown, masker: (val: string) => str
           } else {
             bucket.success += 1;
           }
+          bucket.totalTokens += totalTokens;
         }
 
         if (authIndexKey) {
@@ -1498,6 +1507,7 @@ export function computeKeyStats(usageData: unknown, masker: (val: string) => str
           } else {
             bucket.success += 1;
           }
+          bucket.totalTokens += totalTokens;
         }
       });
     });
@@ -1515,7 +1525,7 @@ export function computeKeyStatsFromDetails(usageDetails: UsageDetail[]): KeyStat
 
   const ensureBucket = (bucket: Record<string, KeyStatBucket>, key: string) => {
     if (!bucket[key]) {
-      bucket[key] = { success: 0, failure: 0 };
+      bucket[key] = createEmptyKeyStatBucket();
     }
     return bucket[key];
   };
@@ -1524,6 +1534,7 @@ export function computeKeyStatsFromDetails(usageDetails: UsageDetail[]): KeyStat
     const source = detail.source;
     const authIndexKey = normalizeAuthIndex(detail.auth_index);
     const isFailed = detail.failed === true;
+    const totalTokens = extractTotalTokens(detail);
 
     if (source) {
       const bucket = ensureBucket(bySource, source);
@@ -1532,6 +1543,7 @@ export function computeKeyStatsFromDetails(usageDetails: UsageDetail[]): KeyStat
       } else {
         bucket.success += 1;
       }
+      bucket.totalTokens += totalTokens;
     }
 
     if (authIndexKey) {
@@ -1541,6 +1553,7 @@ export function computeKeyStatsFromDetails(usageDetails: UsageDetail[]): KeyStat
       } else {
         bucket.success += 1;
       }
+      bucket.totalTokens += totalTokens;
     }
   });
 
