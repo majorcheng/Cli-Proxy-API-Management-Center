@@ -3,6 +3,8 @@ export interface AuthFileFilterItem {
   type?: string | null;
   provider?: string | null;
   disabled?: boolean | null;
+  has_refresh_token?: boolean | null;
+  refresh_token?: string | null;
   status_message?: unknown;
   statusMessage?: unknown;
 }
@@ -28,8 +30,18 @@ const hasStatusMessage = (file: AuthFileFilterItem): boolean => {
   return String(raw).trim().length > 0;
 };
 
+const hasRefreshToken = (file: AuthFileFilterItem): boolean => {
+  if (typeof file.has_refresh_token === 'boolean') {
+    return file.has_refresh_token;
+  }
+  if (typeof file.refresh_token === 'string') {
+    return file.refresh_token.trim().length > 0;
+  }
+  return false;
+};
+
 /**
- * 仅应用类型 / 问题 / 停用三类范围过滤，便于列表和批量操作共用同一口径。
+ * 仅应用类型 / 问题 / 无法刷新三类范围过滤，便于列表和批量操作共用同一口径。
  */
 export const applyAuthFilesScopeFilters = <T extends AuthFileFilterItem>(
   files: T[],
@@ -44,7 +56,7 @@ export const applyAuthFilesScopeFilters = <T extends AuthFileFilterItem>(
     if (problemOnly && !hasStatusMessage(file)) {
       return false;
     }
-    if (disabledOnly && file.disabled !== true) {
+    if (disabledOnly && hasRefreshToken(file)) {
       return false;
     }
     return true;

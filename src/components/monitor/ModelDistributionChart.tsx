@@ -30,7 +30,8 @@ type ViewMode = 'request' | 'token';
 
 export function ModelDistributionChart({ data, loading, isDark, timeRange }: ModelDistributionChartProps) {
   const { t } = useTranslation();
-  const [viewMode, setViewMode] = useState<ViewMode>('request');
+  // 监控中心更关注实际消耗，默认按 Token 视角展示模型分布
+  const [viewMode, setViewMode] = useState<ViewMode>('token');
 
   const timeRangeLabel = formatPresetTimeRangeLabel(timeRange, t);
 

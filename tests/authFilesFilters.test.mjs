@@ -16,25 +16,39 @@ const moduleUrl = `data:text/javascript;base64,${Buffer.from(transpiled.outputTe
 const { applyAuthFilesScopeFilters, applyAuthFilesVisibilityFilters } = await import(moduleUrl);
 
 const SAMPLE_FILES = [
-  { name: 'alpha.json', type: 'codex', provider: 'openai', disabled: false },
+  {
+    name: 'alpha.json',
+    type: 'codex',
+    provider: 'openai',
+    disabled: false,
+    has_refresh_token: true,
+  },
   {
     name: 'beta.json',
     type: 'codex',
     provider: 'openai',
     disabled: true,
+    has_refresh_token: false,
     status_message: 'quota warning',
   },
-  { name: 'gamma.json', type: 'claude', provider: 'anthropic', disabled: true },
+  {
+    name: 'gamma.json',
+    type: 'claude',
+    provider: 'anthropic',
+    disabled: false,
+    refresh_token: '',
+  },
   {
     name: 'delta.json',
     type: 'claude',
     provider: 'anthropic',
     disabled: false,
+    has_refresh_token: true,
     statusMessage: 'needs refresh',
   },
 ];
 
-test('仅显示未启用凭证会过滤出 disabled=true 的文件', () => {
+test('仅显示无法刷新凭证会过滤出 refresh_token 为空的文件', () => {
   const result = applyAuthFilesScopeFilters(SAMPLE_FILES, {
     typeFilter: 'all',
     disabledOnly: true,
@@ -45,7 +59,7 @@ test('仅显示未启用凭证会过滤出 disabled=true 的文件', () => {
   );
 });
 
-test('问题筛选与未启用筛选可以叠加生效', () => {
+test('问题筛选与无法刷新筛选可以叠加生效', () => {
   const result = applyAuthFilesScopeFilters(SAMPLE_FILES, {
     typeFilter: 'all',
     problemOnly: true,

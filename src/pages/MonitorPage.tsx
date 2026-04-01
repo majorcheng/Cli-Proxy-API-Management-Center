@@ -30,6 +30,7 @@ import {
 import { buildSourceInfoMap } from '@/utils/sourceResolver';
 import { normalizeAuthIndex } from '@/utils/usage';
 import type { CredentialInfo } from '@/types/sourceInfo';
+import { ApiDetailsStatsCard } from '@/components/monitor/ApiDetailsStatsCard';
 import { KpiCards } from '@/components/monitor/KpiCards';
 import { ModelDistributionChart } from '@/components/monitor/ModelDistributionChart';
 import { DailyTrendChart } from '@/components/monitor/DailyTrendChart';
@@ -37,7 +38,6 @@ import { HourlyModelChart } from '@/components/monitor/HourlyModelChart';
 import { HourlyTokenChart } from '@/components/monitor/HourlyTokenChart';
 import { ServiceHealthCard } from '@/components/usage/ServiceHealthCard';
 import { ChannelStats } from '@/components/monitor/ChannelStats';
-import { FailureAnalysis } from '@/components/monitor/FailureAnalysis';
 import { RequestLogs } from '@/components/monitor/RequestLogs';
 import styles from './MonitorPage.module.scss';
 
@@ -374,10 +374,11 @@ export function MonitorPage() {
       {/* 服务健康监测搬到监控中心，保持原有最近 7 天语义，仅受 API 筛选影响 */}
       <ServiceHealthCard usage={apiFilteredData} loading={loading} />
 
-      {/* 统计表格 */}
+      {/* 统计表格：失败来源分析下线，右侧保留渠道统计，左侧替换为 API 详细统计 */}
       <div className={styles.statsGrid}>
-        <ChannelStats data={filteredData} loading={loading} providerMap={providerMap} providerModels={providerModels} sourceInfoMap={sourceInfoMap} authFileMap={authFileMap} />
-        <FailureAnalysis data={filteredData} loading={loading} providerMap={providerMap} providerModels={providerModels} sourceInfoMap={sourceInfoMap} authFileMap={authFileMap} />
+        {/* 这两个卡片自带独立时间范围选择器，因此只吃 API 过滤结果，避免与页面顶部时间范围叠加后“点了没反应” */}
+        <ApiDetailsStatsCard data={apiFilteredData} loading={loading} />
+        <ChannelStats data={apiFilteredData} loading={loading} providerMap={providerMap} providerModels={providerModels} sourceInfoMap={sourceInfoMap} authFileMap={authFileMap} />
       </div>
 
       {/* 请求日志 */}

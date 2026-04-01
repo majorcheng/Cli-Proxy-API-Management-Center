@@ -40,6 +40,7 @@ export interface UsageDetail {
   timestamp: string;
   source: string;
   auth_index: number;
+  client_ip?: string;
   tokens: {
     input_tokens: number;
     output_tokens: number;
@@ -67,6 +68,8 @@ export interface ApiStats {
   failureCount: number;
   totalTokens: number;
   totalCost: number;
+  latestRequestTimestamp: number;
+  latestClientIp: string | null;
   models: Record<string, { requests: number; successCount: number; failureCount: number; tokens: number }>;
 }
 
@@ -819,9 +822,13 @@ export function getApiStats(usageData: unknown, modelPrices: Record<string, Mode
   Object.entries(apis).forEach(([endpoint, apiData]) => {
     if (!isRecord(apiData)) return;
     const models: Record<string, { requests: number; successCount: number; failureCount: number; tokens: number }> = {};
+    let derivedRequestCount = 0;
     let derivedSuccessCount = 0;
     let derivedFailureCount = 0;
+    let derivedTotalTokens = 0;
     let totalCost = 0;
+    let latestRequestTimestamp = 0;
+    let latestClientIp: string | null = null;
 
     const modelsData = isRecord(apiData.models) ? apiData.models : {};
     Object.entries(modelsData).forEach(([modelName, modelData]) => {
@@ -832,15 +839,31 @@ export function getApiStats(usageData: unknown, modelPrices: Record<string, Mode
 
       let successCount = 0;
       let failureCount = 0;
+      let derivedModelTokens = 0;
       if (hasExplicitCounts) {
         successCount += Number(modelData.success_count) || 0;
         failureCount += Number(modelData.failure_count) || 0;
       }
 
       const price = modelPrices[modelName];
-      if (details.length > 0 && (!hasExplicitCounts || price)) {
+      if (details.length > 0) {
         details.forEach((detail) => {
           const detailRecord = isRecord(detail) ? detail : null;
+          if (detailRecord) {
+            derivedModelTokens += extractTotalTokens(detailRecord as unknown as UsageDetail);
+
+            const timestampRaw = detailRecord.timestamp;
+            const timestampMs =
+              typeof timestampRaw === 'string' ? Date.parse(timestampRaw) : Number.NaN;
+            if (Number.isFinite(timestampMs) && timestampMs > latestRequestTimestamp) {
+              latestRequestTimestamp = timestampMs;
+              latestClientIp =
+                typeof detailRecord.client_ip === 'string' && detailRecord.client_ip.trim()
+                  ? detailRecord.client_ip.trim()
+                  : null;
+            }
+          }
+
           if (!hasExplicitCounts) {
             if (detailRecord?.failed === true) {
               failureCount += 1;
@@ -858,32 +881,53 @@ export function getApiStats(usageData: unknown, modelPrices: Record<string, Mode
         });
       }
 
+      const requests =
+        typeof modelData.total_requests === 'number'
+          ? Number(modelData.total_requests) || 0
+          : details.length;
+      const tokens =
+        typeof modelData.total_tokens === 'number'
+          ? Number(modelData.total_tokens) || 0
+          : derivedModelTokens;
+
       models[modelName] = {
-        requests: Number(modelData.total_requests) || 0,
+        requests,
         successCount,
         failureCount,
-        tokens: Number(modelData.total_tokens) || 0
+        tokens
       };
+      derivedRequestCount += requests;
       derivedSuccessCount += successCount;
       derivedFailureCount += failureCount;
+      derivedTotalTokens += tokens;
     });
 
+    const hasApiExplicitRequests = typeof apiData.total_requests === 'number';
     const hasApiExplicitCounts =
       typeof apiData.success_count === 'number' || typeof apiData.failure_count === 'number';
+    const hasApiExplicitTokens = typeof apiData.total_tokens === 'number';
     const successCount = hasApiExplicitCounts
       ? (Number(apiData.success_count) || 0)
       : derivedSuccessCount;
     const failureCount = hasApiExplicitCounts
       ? (Number(apiData.failure_count) || 0)
       : derivedFailureCount;
+    const totalRequests = hasApiExplicitRequests
+      ? (Number(apiData.total_requests) || 0)
+      : derivedRequestCount;
+    const totalTokens = hasApiExplicitTokens
+      ? (Number(apiData.total_tokens) || 0)
+      : derivedTotalTokens;
 
     result.push({
       endpoint: maskUsageSensitiveValue(endpoint) || endpoint,
-      totalRequests: Number(apiData.total_requests) || 0,
+      totalRequests,
       successCount,
       failureCount,
-      totalTokens: Number(apiData.total_tokens) || 0,
+      totalTokens,
       totalCost,
+      latestRequestTimestamp,
+      latestClientIp,
       models
     });
   });

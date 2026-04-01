@@ -1,22 +1,37 @@
 import { useState, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { formatCompactNumber, formatUsd, type ApiStats } from '@/utils/usage';
+import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
 import styles from '@/pages/UsagePage.module.scss';
 
 export interface ApiDetailsCardProps {
   apiStats: ApiStats[];
   loading: boolean;
   hasPrices: boolean;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  extra?: ReactNode;
+  showLatestClientIp?: boolean;
 }
 
 type ApiSortKey = 'endpoint' | 'requests' | 'tokens' | 'cost';
 type SortDir = 'asc' | 'desc';
 
-export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardProps) {
+export function ApiDetailsCard({
+  apiStats,
+  loading,
+  hasPrices,
+  title,
+  subtitle,
+  extra,
+  showLatestClientIp = false,
+}: ApiDetailsCardProps) {
   const { t } = useTranslation();
   const [expandedApis, setExpandedApis] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<ApiSortKey>('requests');
+  // 详情列表默认按 Token 用量看，更符合当前监控中心的主视角。
+  const [sortKey, setSortKey] = useState<ApiSortKey>('tokens');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const toggleExpand = (endpoint: string) => {
@@ -59,7 +74,12 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
     sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
 
   return (
-    <Card title={t('usage_stats.api_details')} className={styles.detailsFixedCard}>
+    <Card
+      title={title ?? t('usage_stats.api_details')}
+      subtitle={subtitle}
+      extra={extra}
+      className={styles.detailsFixedCard}
+    >
       {loading ? (
         <div className={styles.hint}>{t('common.loading')}</div>
       ) : sorted.length > 0 ? (
@@ -98,7 +118,14 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                       aria-controls={panelId}
                     >
                       <div className={styles.apiInfo}>
-                        <span className={styles.apiEndpoint}>{api.endpoint}</span>
+                        <div className={styles.apiEndpointRow}>
+                          <span className={styles.apiEndpoint}>{api.endpoint}</span>
+                          {showLatestClientIp && (
+                            <span className={styles.apiMetaBadge}>
+                              {t('usage_stats.latest_ip')}: {normalizeRequestClientIp(api.latestClientIp) ?? '--'}
+                            </span>
+                          )}
+                        </div>
                         <div className={styles.apiStats}>
                           <span className={styles.apiBadge}>
                             <span className={styles.requestCountCell}>

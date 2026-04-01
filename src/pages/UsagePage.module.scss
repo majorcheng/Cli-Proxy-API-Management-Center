@@ -414,11 +414,34 @@
   flex: 1;
 }
 
+.apiEndpointRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .apiEndpoint {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 13px;
   word-break: break-all;
+}
+
+.apiMetaBadge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: $radius-full;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .apiStats {

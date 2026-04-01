@@ -26,6 +26,7 @@ export interface AuthFileItem {
   runtimeOnly?: boolean | string;
   disabled?: boolean;
   unavailable?: boolean;
+  has_refresh_token?: boolean;
   status?: string;
   statusMessage?: string;
   lastRefresh?: string | number;
