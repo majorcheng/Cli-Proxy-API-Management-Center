@@ -18,6 +18,9 @@ jobs:
   build-and-release:
     if: github.event_name != 'release' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    env:
+      # GitHub 已提供官方提前切换开关，这里直接切到 Node 24 运行 JS Action，收掉运行时弃用告警。
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     permissions:
       contents: write
