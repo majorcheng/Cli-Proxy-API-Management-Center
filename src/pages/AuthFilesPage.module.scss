@@ -1017,12 +1017,8 @@
     gap: 8px;
   }
 
-  .cardHeader {
-    gap: 8px;
-  }
-
   .cardSelection {
-    margin-top: 5px;
+    margin-top: 0;
   }
 
   .providerAvatar {
@@ -1040,12 +1036,17 @@
     font-size: 14px;
   }
 
-  .cardHeaderContent {
-    gap: 2px;
+  .cardHeaderBlock {
+    gap: 4px;
+  }
+
+  .cardHeaderTopRow {
+    gap: 4px;
   }
 
   .cardBadgeRow {
     gap: 4px;
+    row-gap: 4px;
   }
 
   .typeBadge,
@@ -1066,8 +1067,24 @@
   }
 
   .fileNameRow {
-    gap: 6px;
+    gap: 4px;
     align-items: center;
+  }
+
+  .inlineStats {
+    gap: 4px;
+  }
+
+  .statPillInline {
+    padding: 3px 6px;
+  }
+
+  .statPillInline .statLabel {
+    font-size: 9px;
+  }
+
+  .statPillInline .statValue {
+    font-size: 11px;
   }
 
   .healthStatusMessage {
@@ -1192,15 +1209,17 @@
   min-width: 0;
 }
 
-.cardHeader {
+.cardHeaderBlock {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .cardSelection {
   flex-shrink: 0;
-  margin-top: 8px;
+  margin-top: 0;
+  align-self: center;
 }
 
 .providerAvatar {
@@ -1227,11 +1246,10 @@
   line-height: 1;
 }
 
-.cardHeaderContent {
+.cardHeaderTopRow {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -1240,6 +1258,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .headerMetaChip {
@@ -1328,14 +1348,27 @@
 .fileNameRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 10px;
   min-width: 0;
 }
 
 .fileNameRow .fileName {
-  flex: 1 1 auto;
+  flex: 1 1 120px;
   min-width: 0;
+}
+
+.inlineStats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  margin-left: auto;
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .cardMeta {
@@ -1520,6 +1553,27 @@
   padding: 12px;
   border-radius: 12px;
   border: 1px solid transparent;
+}
+
+.statPillInline {
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+}
+
+.statPillInline .statLabel {
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.statPillInline .statValue {
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .statLabel {
@@ -1914,28 +1968,6 @@
   background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
 }
 
-.statusToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
-}
-
-.statusToggleHeader {
-  align-self: flex-start;
-  margin-left: auto;
-}
-
-.statusToggleLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 .iconButton:global(.btn.btn-sm) {
   width: 36px;
   height: 36px;
@@ -1969,13 +2001,9 @@
     margin-left: auto;
   }
 
-  .statusToggle {
+  .inlineStats {
     width: 100%;
-    justify-content: space-between;
-  }
-
-  .statusToggleHeader {
-    width: auto;
+    margin-left: 0;
     justify-content: flex-start;
   }
 

@@ -100,7 +100,6 @@ export function AuthFilesPage() {
     loading,
     error,
     uploading,
-    deleting,
     deletingAll,
     statusUpdating,
     batchStatusUpdating,
@@ -108,10 +107,7 @@ export function AuthFilesPage() {
     loadFiles,
     handleUploadClick,
     handleFileChange,
-    handleDelete,
     handleDeleteAll,
-    handleDownload,
-    handleStatusToggle,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,
@@ -744,15 +740,10 @@ export function AuthFilesPage() {
                     selected={selectedFiles.has(file.name)}
                     resolvedTheme={resolvedTheme}
                     disableControls={disableControls}
-                    deleting={deleting}
-                    statusUpdating={statusUpdating}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
                     onShowModels={showModels}
-                    onDownload={handleDownload}
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}
-                    onDelete={handleDelete}
-                    onToggleStatus={handleStatusToggle}
                     onToggleSelect={toggleSelect}
                   />
                 ))}
