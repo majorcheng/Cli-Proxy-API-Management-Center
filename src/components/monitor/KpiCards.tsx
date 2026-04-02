@@ -8,6 +8,7 @@ interface KpiCardsProps {
   data: UsageData | null;
   loading: boolean;
   timeRange: PresetTimeRange;
+  authFileAvailable: number | null;
   authFileTotal: number | null;
 }
 
@@ -25,7 +26,7 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-export function KpiCards({ data, loading, timeRange, authFileTotal }: KpiCardsProps) {
+export function KpiCards({ data, loading, timeRange, authFileAvailable, authFileTotal }: KpiCardsProps) {
   const { t } = useTranslation();
 
   // 计算统计数据
@@ -126,7 +127,9 @@ export function KpiCards({ data, loading, timeRange, authFileTotal }: KpiCardsPr
           <span className={styles.kpiTag}>{t('nav.auth_files')}</span>
         </div>
         <div className={styles.kpiValue}>
-          {authFileTotal === null ? '--' : authFileTotal.toLocaleString()}
+          {authFileAvailable === null || authFileTotal === null
+            ? '--'
+            : `${authFileAvailable.toLocaleString()}/${authFileTotal.toLocaleString()}`}
         </div>
       </div>
 

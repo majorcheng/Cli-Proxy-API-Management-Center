@@ -14,10 +14,12 @@ type DeleteAllOptions = {
   filter: string;
   problemOnly: boolean;
   disabledOnly: boolean;
+  availableOnly: boolean;
   scopeLabel?: string;
   onResetFilterToAll: () => void;
   onResetProblemOnly: () => void;
   onResetDisabledOnly: () => void;
+  onResetAvailableOnly: () => void;
 };
 
 export type UseAuthFilesDataResult = {
@@ -261,12 +263,15 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         filter,
         problemOnly,
         disabledOnly,
+        availableOnly,
         scopeLabel,
         onResetFilterToAll,
         onResetProblemOnly,
         onResetDisabledOnly,
+        onResetAvailableOnly,
       } = deleteAllOptions;
-      const hasScopedFilter = filter !== 'all' || problemOnly === true || disabledOnly === true;
+      const hasScopedFilter =
+        filter !== 'all' || problemOnly === true || disabledOnly === true || availableOnly === true;
       const confirmMessage =
         hasScopedFilter && scopeLabel
           ? t('auth_files.delete_scoped_confirm', { scope: scopeLabel })
@@ -290,6 +295,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
                 typeFilter: filter,
                 problemOnly,
                 disabledOnly,
+                availableOnly,
               }).filter((file) => !isRuntimeOnlyAuthFile(file));
 
               if (filesToDelete.length === 0) {
@@ -355,6 +361,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
               }
               if (disabledOnly) {
                 onResetDisabledOnly();
+              }
+              if (availableOnly) {
+                onResetAvailableOnly();
               }
             }
           } catch (err: unknown) {

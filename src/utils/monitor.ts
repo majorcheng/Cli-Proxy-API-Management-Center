@@ -2,6 +2,7 @@
  * 监控中心公共工具函数
  */
 
+import { resolveCodexWeeklyLimit } from '@/features/authFiles/codexWeeklyLimit';
 import type { UsageData } from '@/pages/MonitorPage';
 
 /**
@@ -21,6 +22,20 @@ export interface DisableState {
   displayName: string;
   step: number;
 }
+
+type AuthFileAvailabilityEntry = {
+  disabled?: boolean;
+  unavailable?: boolean;
+  provider?: unknown;
+  type?: unknown;
+  status_message?: unknown;
+  statusMessage?: unknown;
+  next_retry_after?: unknown;
+  nextRetryAfter?: unknown;
+  updated_at?: unknown;
+  updatedAt?: unknown;
+  modified?: unknown;
+};
 
 /**
  * 脱敏 API Key
@@ -198,6 +213,28 @@ export function createDisableState(
     ? `${providerName} / ${model}`
     : `${maskSecret(source)} / ${model}`;
   return { source, model, displayName, step: 1 };
+}
+
+/**
+ * 统计认证文件中的可用数量。
+ * 监控中心“号池总数”卡片改成展示“可用/总量”后，需要复用同一套口径：
+ * - 手动 disabled 的认证文件不计入可用；
+ * - 后端已标记 unavailable 的认证文件也不计入可用。
+ * - 已识别为 429/冷却阻断态的 Codex 认证文件也不计入可用。
+ */
+export function countAvailableAuthFiles(files: unknown[] | null | undefined): number {
+  if (!Array.isArray(files)) return 0;
+
+  return files.reduce<number>((count, file) => {
+    if (!file || typeof file !== 'object') return count;
+
+    const entry = file as AuthFileAvailabilityEntry;
+    const isAvailable =
+      entry.disabled !== true &&
+      entry.unavailable !== true &&
+      !resolveCodexWeeklyLimit(entry).is429Limited;
+    return isAvailable ? count + 1 : count;
+  }, 0);
 }
 
 /**

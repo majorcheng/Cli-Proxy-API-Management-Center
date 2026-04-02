@@ -80,6 +80,7 @@ export function AuthFilesPage() {
   const [filter, setFilter] = useState<'all' | string>('all');
   const [problemOnly, setProblemOnly] = useState(false);
   const [disabledOnly, setDisabledOnly] = useState(false);
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(resolvePersistedAuthFilesPageSize(null));
@@ -182,6 +183,9 @@ export function AuthFilesPage() {
     if (typeof persisted.disabledOnly === 'boolean') {
       setDisabledOnly(persisted.disabledOnly);
     }
+    if (typeof persisted.availableOnly === 'boolean') {
+      setAvailableOnly(persisted.availableOnly);
+    }
     if (typeof persisted.search === 'string') {
       setSearch(persisted.search);
     }
@@ -199,12 +203,13 @@ export function AuthFilesPage() {
       filter,
       problemOnly,
       disabledOnly,
+      availableOnly,
       search,
       page,
       pageSize,
       sortMode,
     });
-  }, [filter, problemOnly, disabledOnly, search, page, pageSize, sortMode]);
+  }, [filter, problemOnly, disabledOnly, availableOnly, search, page, pageSize, sortMode]);
 
   useEffect(() => {
     setPageSizeInput(String(pageSize));
@@ -294,8 +299,9 @@ export function AuthFilesPage() {
         searchTerm: '',
         problemOnly,
         disabledOnly,
+        availableOnly,
       }),
-    [files, problemOnly, disabledOnly]
+    [files, problemOnly, disabledOnly, availableOnly]
   );
 
   const sortOptions = useMemo(
@@ -322,8 +328,9 @@ export function AuthFilesPage() {
       searchTerm: search,
       problemOnly,
       disabledOnly,
+      availableOnly,
     });
-  }, [files, filter, search, problemOnly, disabledOnly]);
+  }, [files, filter, search, problemOnly, disabledOnly, availableOnly]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -559,6 +566,22 @@ export function AuthFilesPage() {
   const deleteScopeLabel = useMemo(() => {
     const typeLabel = filter === 'all' ? '' : getTypeLabel(t, filter);
 
+    if (availableOnly) {
+      const scopeParts: string[] = [];
+      if (problemOnly) {
+        scopeParts.push(t('auth_files.scope_part_problem'));
+      }
+      if (disabledOnly) {
+        scopeParts.push(t('auth_files.scope_part_disabled'));
+      }
+      scopeParts.push(t('auth_files.scope_part_available'));
+
+      const scopeText = scopeParts.join(t('auth_files.scope_joiner'));
+      return typeLabel
+        ? t('auth_files.delete_scope_combined_with_type', { type: typeLabel, scope: scopeText })
+        : t('auth_files.delete_scope_combined', { scope: scopeText });
+    }
+
     if (problemOnly && disabledOnly) {
       return typeLabel
         ? t('auth_files.delete_scope_problem_disabled_with_type', { type: typeLabel })
@@ -578,7 +601,7 @@ export function AuthFilesPage() {
       return t('auth_files.delete_scope_type', { type: typeLabel });
     }
     return '';
-  }, [disabledOnly, filter, problemOnly, t]);
+  }, [availableOnly, disabledOnly, filter, problemOnly, t]);
 
   const deleteAllButtonLabel = deleteScopeLabel
     ? t('auth_files.delete_scoped_button', { scope: deleteScopeLabel })
@@ -614,10 +637,12 @@ export function AuthFilesPage() {
                   filter,
                   problemOnly,
                   disabledOnly,
+                  availableOnly,
                   scopeLabel: deleteScopeLabel || undefined,
                   onResetFilterToAll: () => setFilter('all'),
                   onResetProblemOnly: () => setProblemOnly(false),
                   onResetDisabledOnly: () => setDisabledOnly(false),
+                  onResetAvailableOnly: () => setAvailableOnly(false),
                 })
               }
               disabled={disableControls || loading || deletingAll}
@@ -713,6 +738,21 @@ export function AuthFilesPage() {
                         label={
                           <span className={styles.filterToggleLabel}>
                             {t('auth_files.disabled_filter_only')}
+                          </span>
+                        }
+                      />
+                    </div>
+                    <div className={styles.filterToggleCard}>
+                      <ToggleSwitch
+                        checked={availableOnly}
+                        onChange={(value) => {
+                          setAvailableOnly(value);
+                          setPage(1);
+                        }}
+                        ariaLabel={t('auth_files.available_filter_only')}
+                        label={
+                          <span className={styles.filterToggleLabel}>
+                            {t('auth_files.available_filter_only')}
                           </span>
                         }
                       />

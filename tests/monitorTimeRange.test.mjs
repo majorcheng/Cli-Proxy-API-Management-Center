@@ -3,8 +3,26 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
+const codexWeeklyLimitPath = new URL('../src/features/authFiles/codexWeeklyLimit.ts', import.meta.url);
+const codexWeeklyLimitSource = await readFile(codexWeeklyLimitPath, 'utf8');
+const codexWeeklyLimitTranspiled = ts.transpileModule(codexWeeklyLimitSource, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2020,
+  },
+});
+const codexWeeklyLimitModuleUrl = `data:text/javascript;base64,${Buffer.from(codexWeeklyLimitTranspiled.outputText).toString('base64')}`;
+
 const sourcePath = new URL('../src/utils/monitor.ts', import.meta.url);
-const sourceCode = await readFile(sourcePath, 'utf8');
+const sourceCode = (await readFile(sourcePath, 'utf8'))
+  .replace(
+    /import \{ resolveCodexWeeklyLimit \} from ['"]@\/features\/authFiles\/codexWeeklyLimit['"];\n/,
+    `import { resolveCodexWeeklyLimit } from '${codexWeeklyLimitModuleUrl}';\n`,
+  )
+  .replace(
+    /import type \{ UsageData \} from ['"]@\/pages\/MonitorPage['"];\n/,
+    '',
+  );
 const transpiled = ts.transpileModule(sourceCode, {
   compilerOptions: {
     module: ts.ModuleKind.ESNext,

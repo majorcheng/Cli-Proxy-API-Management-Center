@@ -22,6 +22,7 @@ import { useThemeStore } from '@/stores';
 import { usageApi, providersApi, authFilesApi } from '@/services/api';
 import {
   MONITOR_PRESET_TIME_RANGES,
+  countAvailableAuthFiles,
   filterDataByApiFilter,
   filterDataByTimeRange,
   formatPresetTimeRangeLabel,
@@ -97,6 +98,7 @@ export function MonitorPage() {
   const [providerTypeMap, setProviderTypeMap] = useState<Record<string, string>>({});
   const [sourceInfoMap, setSourceInfoMap] = useState<Map<string, import('@/types/sourceInfo').SourceInfo>>(new Map());
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
+  const [authFileAvailable, setAuthFileAvailable] = useState<number | null>(null);
   const [authFileTotal, setAuthFileTotal] = useState<number | null>(null);
 
   // 加载渠道名称映射（支持所有提供商类型）
@@ -221,6 +223,7 @@ export function MonitorPage() {
       // 构建 authFileMap（认证文件索引 → 凭证信息）
       const credMap = new Map<string, CredentialInfo>();
       const files = (authFilesResponse as { files?: unknown[]; total?: number })?.files || [];
+      setAuthFileAvailable(countAvailableAuthFiles(files));
       setAuthFileTotal(
         typeof (authFilesResponse as { total?: unknown })?.total === 'number'
           ? (authFilesResponse as { total: number }).total
@@ -239,6 +242,7 @@ export function MonitorPage() {
       });
       setAuthFileMap(credMap);
     } catch (err) {
+      setAuthFileAvailable(null);
       setAuthFileTotal(null);
       console.warn('Monitor: Failed to load provider map:', err);
     }
@@ -357,7 +361,13 @@ export function MonitorPage() {
       </div>
 
       {/* KPI 卡片 */}
-      <KpiCards data={filteredData} loading={loading} timeRange={timeRange} authFileTotal={authFileTotal} />
+      <KpiCards
+        data={filteredData}
+        loading={loading}
+        timeRange={timeRange}
+        authFileAvailable={authFileAvailable}
+        authFileTotal={authFileTotal}
+      />
 
       {/* 图表区域 */}
       <div className={styles.chartsGrid}>

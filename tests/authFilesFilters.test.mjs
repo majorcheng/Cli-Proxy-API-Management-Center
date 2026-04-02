@@ -19,7 +19,7 @@ const SAMPLE_FILES = [
   {
     name: 'alpha.json',
     type: 'codex',
-    provider: 'openai',
+    provider: 'codex',
     disabled: false,
     has_refresh_token: true,
   },
@@ -45,6 +45,16 @@ const SAMPLE_FILES = [
     disabled: false,
     has_refresh_token: true,
     statusMessage: 'needs refresh',
+  },
+  {
+    name: 'epsilon.json',
+    type: 'codex',
+    provider: 'codex',
+    disabled: false,
+    has_refresh_token: true,
+    status_message:
+      '{"error":{"type":"usage_limit_reached","resets_at":1775574090,"resets_in_seconds":601085}}',
+    next_retry_after: '2026-04-07T23:01:29+08:00',
   },
 ];
 
@@ -80,5 +90,22 @@ test('展示过滤会继续叠加类型与搜索关键字', () => {
   assert.deepEqual(
     result.map((item) => item.name),
     ['gamma.json']
+  );
+});
+
+test('仅显示可用凭证会排除 disabled/unavailable 与 codex 429 冷却账号', () => {
+  const result = applyAuthFilesScopeFilters(
+    [
+      ...SAMPLE_FILES,
+      { name: 'zeta.json', type: 'gemini', provider: 'gemini', unavailable: true },
+    ],
+    {
+      typeFilter: 'all',
+      availableOnly: true,
+    }
+  );
+  assert.deepEqual(
+    result.map((item) => item.name),
+    ['alpha.json', 'gamma.json', 'delta.json']
   );
 });

@@ -12,6 +12,7 @@ export type AuthFilesUiState = {
   filter?: string;
   problemOnly?: boolean;
   disabledOnly?: boolean;
+  availableOnly?: boolean;
   /**
    * 兼容旧版本：历史上曾支持普通/简略双模式切换。
    * 现在页面已固定为简略模式，但仍保留这些字段读取迁移旧会话设置。
