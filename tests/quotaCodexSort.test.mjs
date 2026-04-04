@@ -5,6 +5,9 @@ import ts from 'typescript';
 
 const authFileSortModuleUrl = `data:text/javascript;base64,${Buffer.from(
   `
+  const CODEX_PLAN_ORDER = { pro: 0, plus: 1, team: 2, free: 3 };
+  const UNKNOWN_CODEX_PLAN_ORDER = 4;
+
   export const resolveFirstRegisteredAtMs = (file) => {
     const value = file?.first_registered_at ?? file?.firstRegisteredAt;
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -22,12 +25,24 @@ const authFileSortModuleUrl = `data:text/javascript;base64,${Buffer.from(
     }
     return 0;
   };
-  `,
-).toString('base64')}`;
 
-const quotaUtilsModuleUrl = `data:text/javascript;base64,${Buffer.from(
-  `
-  export const normalizePlanType = (value) => {
+  const compareAuthFilesByFirstRegisteredAt = (a, b) => {
+    const firstRegisteredAtA = resolveFirstRegisteredAtMs(a);
+    const firstRegisteredAtB = resolveFirstRegisteredAtMs(b);
+    const hasFirstRegisteredAtA = firstRegisteredAtA > 0;
+    const hasFirstRegisteredAtB = firstRegisteredAtB > 0;
+
+    if (hasFirstRegisteredAtA && hasFirstRegisteredAtB) {
+      const firstRegisteredDiff = firstRegisteredAtA - firstRegisteredAtB;
+      if (firstRegisteredDiff !== 0) return firstRegisteredDiff;
+    } else if (hasFirstRegisteredAtA !== hasFirstRegisteredAtB) {
+      return hasFirstRegisteredAtA ? -1 : 1;
+    }
+
+    return 0;
+  };
+
+  const normalizePlanType = (value) => {
     if (typeof value === 'string') {
       const trimmed = value.trim();
       return trimmed ? trimmed.toLowerCase() : null;
@@ -38,7 +53,7 @@ const quotaUtilsModuleUrl = `data:text/javascript;base64,${Buffer.from(
     return null;
   };
 
-  export const resolveCodexPlanType = (file) => {
+  const resolveCodexPlanType = (file) => {
     const candidates = [
       file?.plan_type,
       file?.planType,
@@ -59,13 +74,31 @@ const quotaUtilsModuleUrl = `data:text/javascript;base64,${Buffer.from(
     }
     return null;
   };
+
+  const resolveCodexPlanOrder = (file, resolvePlanType) => {
+    const overriddenPlanType = resolvePlanType ? normalizePlanType(resolvePlanType(file)) : null;
+    const planType = overriddenPlanType ?? resolveCodexPlanType(file);
+    if (!planType) return UNKNOWN_CODEX_PLAN_ORDER;
+    return CODEX_PLAN_ORDER[planType] ?? UNKNOWN_CODEX_PLAN_ORDER;
+  };
+
+  export const compareCodexAuthFilesByPlanAndFirstRegisteredAt = (a, b, resolvePlanType) => {
+    const planOrderDiff = resolveCodexPlanOrder(a, resolvePlanType) - resolveCodexPlanOrder(b, resolvePlanType);
+    if (planOrderDiff !== 0) return planOrderDiff;
+
+    const firstRegisteredDiff = compareAuthFilesByFirstRegisteredAt(a, b);
+    if (firstRegisteredDiff !== 0) return firstRegisteredDiff;
+
+    return a.name.localeCompare(b.name);
+  };
   `,
 ).toString('base64')}`;
 
 const sourcePath = new URL('../src/components/quota/sort.ts', import.meta.url);
-const sourceCode = (await readFile(sourcePath, 'utf8'))
-  .replace(/from ['"]@\/features\/authFiles\/sort['"]/g, `from '${authFileSortModuleUrl}'`)
-  .replace(/from ['"]@\/utils\/quota['"]/g, `from '${quotaUtilsModuleUrl}'`);
+const sourceCode = (await readFile(sourcePath, 'utf8')).replace(
+  /from ['"]@\/features\/authFiles\/sort['"]/g,
+  `from '${authFileSortModuleUrl}'`,
+);
 
 const transpiled = ts.transpileModule(sourceCode, {
   compilerOptions: {

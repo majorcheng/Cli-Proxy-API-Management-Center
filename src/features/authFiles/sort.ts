@@ -1,5 +1,15 @@
 import type { AuthFileItem } from '@/types';
 import { normalizeProviderKey } from '@/features/authFiles/constants';
+import { normalizePlanType, resolveCodexPlanType } from '@/utils/quota';
+
+const CODEX_PLAN_ORDER: Record<string, number> = {
+  pro: 0,
+  plus: 1,
+  team: 2,
+  free: 3,
+};
+
+const UNKNOWN_CODEX_PLAN_ORDER = 4;
 
 export const parseDateLikeValue = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -29,7 +39,10 @@ export const resolveFirstRegisteredAtMs = (file: AuthFileItem): number => {
   return parseDateLikeValue(file['first_registered_at'] ?? file['firstRegisteredAt']);
 };
 
-export const compareAuthFilesByDefaultSort = (a: AuthFileItem, b: AuthFileItem): number => {
+export const compareAuthFilesByFirstRegisteredAt = (
+  a: AuthFileItem,
+  b: AuthFileItem
+): number => {
   const firstRegisteredAtA = resolveFirstRegisteredAtMs(a);
   const firstRegisteredAtB = resolveFirstRegisteredAtMs(b);
   const hasFirstRegisteredAtA = firstRegisteredAtA > 0;
@@ -43,8 +56,46 @@ export const compareAuthFilesByDefaultSort = (a: AuthFileItem, b: AuthFileItem):
     return hasFirstRegisteredAtA ? -1 : 1;
   }
 
+  return 0;
+};
+
+const resolveCodexPlanOrder = (
+  file: AuthFileItem,
+  resolvePlanType?: (file: AuthFileItem) => unknown
+): number => {
+  const overriddenPlanType = resolvePlanType ? normalizePlanType(resolvePlanType(file)) : null;
+  const planType = overriddenPlanType ?? resolveCodexPlanType(file);
+  if (!planType) return UNKNOWN_CODEX_PLAN_ORDER;
+  return CODEX_PLAN_ORDER[planType] ?? UNKNOWN_CODEX_PLAN_ORDER;
+};
+
+export const compareCodexAuthFilesByPlanAndFirstRegisteredAt = (
+  a: AuthFileItem,
+  b: AuthFileItem,
+  resolvePlanType?: (file: AuthFileItem) => unknown
+): number => {
+  const planOrderDiff =
+    resolveCodexPlanOrder(a, resolvePlanType) - resolveCodexPlanOrder(b, resolvePlanType);
+  if (planOrderDiff !== 0) return planOrderDiff;
+
+  const firstRegisteredDiff = compareAuthFilesByFirstRegisteredAt(a, b);
+  if (firstRegisteredDiff !== 0) return firstRegisteredDiff;
+
+  return a.name.localeCompare(b.name);
+};
+
+export const compareAuthFilesByDefaultSort = (a: AuthFileItem, b: AuthFileItem): number => {
   const providerA = normalizeProviderKey(String(a.provider ?? a.type ?? 'unknown'));
   const providerB = normalizeProviderKey(String(b.provider ?? b.type ?? 'unknown'));
+
+  if (providerA === 'codex' && providerB === 'codex') {
+    const codexCompare = compareCodexAuthFilesByPlanAndFirstRegisteredAt(a, b);
+    if (codexCompare !== 0) return codexCompare;
+  }
+
+  const firstRegisteredDiff = compareAuthFilesByFirstRegisteredAt(a, b);
+  if (firstRegisteredDiff !== 0) return firstRegisteredDiff;
+
   const providerCompare = providerA.localeCompare(providerB);
   if (providerCompare !== 0) return providerCompare;
 

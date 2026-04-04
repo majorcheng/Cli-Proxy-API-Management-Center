@@ -7,11 +7,70 @@ const constantsModuleUrl = `data:text/javascript;base64,${Buffer.from(
   `export const normalizeProviderKey = (value) => String(value ?? '').trim().toLowerCase();`,
 ).toString('base64')}`;
 
+const quotaUtilsModuleUrl = `data:text/javascript;base64,${Buffer.from(
+  `
+  export const normalizePlanType = (value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed ? trimmed.toLowerCase() : null;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+    return null;
+  };
+
+  export const resolveCodexPlanType = (file) => {
+    const candidates = [
+      file?.plan_type,
+      file?.planType,
+      file?.id_token,
+      file?.id_token?.plan_type,
+      file?.id_token?.planType,
+      file?.metadata?.plan_type,
+      file?.metadata?.planType,
+      file?.metadata?.id_token,
+      file?.metadata?.id_token?.plan_type,
+      file?.metadata?.id_token?.planType,
+      file?.attributes?.plan_type,
+      file?.attributes?.planType,
+      file?.attributes?.id_token,
+      file?.attributes?.id_token?.plan_type,
+      file?.attributes?.id_token?.planType,
+    ];
+
+    const parseValue = (candidate) => {
+      if (!candidate) return null;
+      if (typeof candidate === 'string') {
+        const trimmed = candidate.trim();
+        if (!trimmed) return null;
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed && typeof parsed === 'object') {
+            return normalizePlanType(parsed.plan_type ?? parsed.planType);
+          }
+        } catch {}
+        return normalizePlanType(candidate);
+      }
+      if (typeof candidate === 'object') {
+        return normalizePlanType(candidate.plan_type ?? candidate.planType);
+      }
+      return normalizePlanType(candidate);
+    };
+
+    for (const candidate of candidates) {
+      const normalized = parseValue(candidate);
+      if (normalized) return normalized;
+    }
+    return null;
+  };
+  `,
+).toString('base64')}`;
+
 const sourcePath = new URL('../src/features/authFiles/sort.ts', import.meta.url);
-const sourceCode = (await readFile(sourcePath, 'utf8')).replace(
-  /from ['"]@\/features\/authFiles\/constants['"]/g,
-  `from '${constantsModuleUrl}'`,
-);
+const sourceCode = (await readFile(sourcePath, 'utf8'))
+  .replace(/from ['"]@\/features\/authFiles\/constants['"]/g, `from '${constantsModuleUrl}'`)
+  .replace(/from ['"]@\/utils\/quota['"]/g, `from '${quotaUtilsModuleUrl}'`);
 const transpiled = ts.transpileModule(sourceCode, {
   compilerOptions: {
     module: ts.ModuleKind.ESNext,
@@ -20,7 +79,27 @@ const transpiled = ts.transpileModule(sourceCode, {
 });
 
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(transpiled.outputText).toString('base64')}`;
-const { compareAuthFilesByDefaultSort, resolveFirstRegisteredAtMs } = await import(moduleUrl);
+const {
+  compareAuthFilesByDefaultSort,
+  compareCodexAuthFilesByPlanAndFirstRegisteredAt,
+  resolveFirstRegisteredAtMs,
+} = await import(moduleUrl);
+
+test('Codex 认证文件默认排序优先按套餐分组，再按 first_registered_at 正序', () => {
+  const files = [
+    { name: 'free.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', planType: 'free' },
+    { name: 'team.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', planType: 'team' },
+    { name: 'pro.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', planType: 'pro' },
+    { name: 'plus.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', planType: 'plus' },
+    { name: 'unknown.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
+  ];
+
+  files.sort(compareAuthFilesByDefaultSort);
+  assert.deepEqual(
+    files.map((file) => file.name),
+    ['pro.json', 'plus.json', 'team.json', 'free.json', 'unknown.json'],
+  );
+});
 
 test('认证文件默认排序优先按 first_registered_at 正序，老账号在前', () => {
   const files = [
@@ -51,6 +130,20 @@ test('默认排序兼容秒级时间戳和 camelCase firstRegisteredAt', () => {
   assert.equal(resolveFirstRegisteredAtMs(files[2]), 1772582400000);
 });
 
+test('Codex 默认排序可从 metadata、attributes 和 id_token 读取套餐类型', () => {
+  const files = [
+    { name: 'team.json', provider: 'codex', metadata: { planType: 'team' } },
+    { name: 'free.json', provider: 'codex', attributes: { plan_type: 'free' } },
+    { name: 'plus.json', provider: 'codex', id_token: { planType: 'plus' } },
+  ];
+
+  files.sort(compareAuthFilesByDefaultSort);
+  assert.deepEqual(
+    files.map((file) => file.name),
+    ['plus.json', 'team.json', 'free.json'],
+  );
+});
+
 test('缺少首注时间时回退到 provider 和 name，保证排序稳定', () => {
   const files = [
     { name: 'b.json', provider: 'gemini' },
@@ -76,5 +169,19 @@ test('缺少首注时间的条目不会被误判成最老账号排到最前面',
   assert.deepEqual(
     files.map((file) => file.name),
     ['older.json', 'newer.json', 'unknown.json'],
+  );
+});
+
+test('共享的 Codex 排序 helper 在同套餐组内按首注时间和名称稳定排序', () => {
+  const files = [
+    { name: 'b.json', provider: 'codex', planType: 'team' },
+    { name: 'a.json', provider: 'codex', planType: 'team' },
+    { name: 'older.json', provider: 'codex', planType: 'team', first_registered_at: '2026-03-01T00:00:00Z' },
+  ];
+
+  files.sort(compareCodexAuthFilesByPlanAndFirstRegisteredAt);
+  assert.deepEqual(
+    files.map((file) => file.name),
+    ['older.json', 'a.json', 'b.json'],
   );
 });
