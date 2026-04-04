@@ -196,9 +196,11 @@ test('未缓存额度时回退到 auth file 自带的 planType 继续排序', ()
 });
 
 test('配额区块在分页前应用可选排序钩子，并且仅 Codex 配置接线该钩子', () => {
+  assert.match(quotaSectionSource, /const filteredFiles = useMemo\(\(\) => files\.filter\(\(file\) => config\.filterFn\(file\)\), \[files, config\]\);/);
   assert.match(quotaSectionSource, /const sectionFiles = useMemo\(\(\) => \{/);
-  assert.match(quotaSectionSource, /if \(!config\.compareFiles\) return filtered;/);
-  assert.match(quotaSectionSource, /return \[\.\.\.filtered\]\.sort\(\(left, right\) => config\.compareFiles!\(left, right, quota\)\);/);
+  assert.match(quotaSectionSource, /if \(!config\.compareFiles\) return filteredFiles;/);
+  assert.match(quotaSectionSource, /return \[\.\.\.filteredFiles\]\.sort\(\(left, right\) => config\.compareFiles!\(left, right, quota\)\);/);
   assert.match(quotaSectionSource, /useQuotaPagination\(sectionFiles\)/);
+  assert.match(quotaSectionSource, /setQuota\(\(prev\) => trimQuotaStateForFiles\(prev, filteredFiles\)\);/);
   assert.match(quotaConfigSource, /compareFiles: compareCodexQuotaFiles,/);
 });

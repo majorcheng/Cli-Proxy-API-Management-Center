@@ -98,6 +98,36 @@ interface QuotaSectionProps<TState extends QuotaStatusState, TData> {
   disabled: boolean;
 }
 
+const trimQuotaStateForFiles = <TState,>(
+  prev: Record<string, TState>,
+  files: AuthFileItem[]
+): Record<string, TState> => {
+  const nextState: Record<string, TState> = {};
+  let changed = false;
+
+  files.forEach((file) => {
+    const cached = prev[file.name];
+    if (cached) {
+      nextState[file.name] = cached;
+    }
+  });
+
+  const prevKeys = Object.keys(prev);
+  const nextKeys = Object.keys(nextState);
+  if (prevKeys.length !== nextKeys.length) {
+    changed = true;
+  } else {
+    for (const key of nextKeys) {
+      if (prev[key] !== nextState[key]) {
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  return changed ? nextState : prev;
+};
+
 export function QuotaSection<TState extends QuotaStatusState, TData>({
   config,
   files,
@@ -115,14 +145,14 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   const [viewMode, setViewMode] = useState<ViewMode>('paged');
   const [showTooManyWarning, setShowTooManyWarning] = useState(false);
   const { quota, loadQuota } = useQuotaLoader(config);
+  const filteredFiles = useMemo(() => files.filter((file) => config.filterFn(file)), [files, config]);
 
   const sectionFiles = useMemo(() => {
-    const filtered = files.filter((file) => config.filterFn(file));
-    if (!config.compareFiles) return filtered;
+    if (!config.compareFiles) return filteredFiles;
 
     // 排序必须发生在分页之前，避免跨页时出现“同一规则下不同页顺序不一致”的问题。
-    return [...filtered].sort((left, right) => config.compareFiles!(left, right, quota));
-  }, [files, config, quota]);
+    return [...filteredFiles].sort((left, right) => config.compareFiles!(left, right, quota));
+  }, [filteredFiles, config.compareFiles, quota]);
   const showAllAllowed = sectionFiles.length <= MAX_SHOW_ALL_THRESHOLD;
   const effectiveViewMode: ViewMode = viewMode === 'all' && !showAllAllowed ? 'paged' : viewMode;
 
@@ -222,21 +252,12 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
 
   useEffect(() => {
     if (loading) return;
-    if (sectionFiles.length === 0) {
-      setQuota({});
+    if (filteredFiles.length === 0) {
+      setQuota((prev) => (Object.keys(prev).length === 0 ? prev : {}));
       return;
     }
-    setQuota((prev) => {
-      const nextState: Record<string, TState> = {};
-      sectionFiles.forEach((file) => {
-        const cached = prev[file.name];
-        if (cached) {
-          nextState[file.name] = cached;
-        }
-      });
-      return nextState;
-    });
-  }, [sectionFiles, loading, setQuota]);
+    setQuota((prev) => trimQuotaStateForFiles(prev, filteredFiles));
+  }, [filteredFiles, loading, setQuota]);
 
   const hasLoadingCards = useMemo(
     () => sectionFiles.some((file) => quota[file.name]?.status === 'loading'),
