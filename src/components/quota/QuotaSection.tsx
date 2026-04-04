@@ -7,15 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { IconRefreshCw } from '@/components/ui/icons';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
-import { useQuotaStore, useThemeStore } from '@/stores';
+import { useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { AuthFileItem, ResolvedTheme } from '@/types';
+import { getStatusFromError } from '@/utils/quota';
 import { QuotaCard } from './QuotaCard';
 import type { QuotaStatusState } from './QuotaCard';
 import { useQuotaLoader } from './useQuotaLoader';
 import type { QuotaConfig } from './quotaConfigs';
 import { useGridColumns } from './useGridColumns';
-import { IconRefreshCw } from '@/components/ui/icons';
 import { resolveQuotaPagedPageSize } from './pagination';
 import styles from '@/pages/QuotaPage.module.scss';
 
@@ -105,12 +106,12 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
 }: QuotaSectionProps<TState, TData>) {
   const { t } = useTranslation();
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
+  const showNotification = useNotificationStore((state) => state.showNotification);
   const setQuota = useQuotaStore((state) => state[config.storeSetter]) as QuotaSetter<
     Record<string, TState>
   >;
 
-  /* Removed useRef */
-  const [columns, gridRef] = useGridColumns(380); // Min card width 380px matches SCSS
+  const [columns, gridRef] = useGridColumns(380);
   const [viewMode, setViewMode] = useState<ViewMode>('paged');
   const [showTooManyWarning, setShowTooManyWarning] = useState(false);
 
@@ -149,7 +150,6 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     };
   }, [showAllAllowed, viewMode]);
 
-  // Update page size based on view mode and columns
   useEffect(() => {
     if (effectiveViewMode === 'all') {
       setPageSize(Math.max(1, filteredFiles.length));
@@ -168,6 +168,40 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     pendingQuotaRefreshRef.current = true;
     void triggerHeaderRefresh();
   }, []);
+
+  const refreshQuotaForFile = useCallback(
+    async (file: AuthFileItem) => {
+      if (disabled || loading || sectionLoading) return;
+      if (quota[file.name]?.status === 'loading') return;
+
+      // 单卡刷新直接复用现有配额抓取链路，不额外引入新的页面级接口或状态机。
+      setQuota((prev) => ({
+        ...prev,
+        [file.name]: config.buildLoadingState()
+      }));
+
+      try {
+        const data = await config.fetchQuota(file, t);
+        setQuota((prev) => ({
+          ...prev,
+          [file.name]: config.buildSuccessState(data)
+        }));
+        showNotification(t('auth_files.quota_refresh_success', { name: file.name }), 'success');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t('common.unknown_error');
+        const status = getStatusFromError(err);
+        setQuota((prev) => ({
+          ...prev,
+          [file.name]: config.buildErrorState(message, status)
+        }));
+        showNotification(
+          t('auth_files.quota_refresh_failed', { name: file.name, message }),
+          'error'
+        );
+      }
+    },
+    [config, disabled, loading, quota, sectionLoading, setQuota, showNotification, t]
+  );
 
   useEffect(() => {
     const wasLoading = prevFilesLoadingRef.current;
@@ -202,18 +236,20 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     });
   }, [filteredFiles, loading, setQuota]);
 
+  const hasLoadingCards = useMemo(
+    () => filteredFiles.some((file) => quota[file.name]?.status === 'loading'),
+    [filteredFiles, quota]
+  );
+
   const titleNode = (
     <div className={styles.titleWrapper}>
       <span>{t(`${config.i18nPrefix}.title`)}</span>
-      {filteredFiles.length > 0 && (
-        <span className={styles.countBadge}>
-          {filteredFiles.length}
-        </span>
-      )}
+      {filteredFiles.length > 0 && <span className={styles.countBadge}>{filteredFiles.length}</span>}
     </div>
   );
 
-  const isRefreshing = sectionLoading || loading;
+  const isBatchRefreshing = sectionLoading || loading;
+  const disableBatchRefresh = disabled || isBatchRefreshing || hasLoadingCards;
 
   return (
     <Card
@@ -246,12 +282,12 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
             variant="secondary"
             size="sm"
             onClick={handleRefresh}
-            disabled={disabled || isRefreshing}
-            loading={isRefreshing}
+            disabled={disableBatchRefresh}
+            loading={isBatchRefreshing}
             title={t('quota_management.refresh_files_and_quota')}
             aria-label={t('quota_management.refresh_files_and_quota')}
           >
-            {!isRefreshing && <IconRefreshCw size={16} />}
+            {!isBatchRefreshing && <IconRefreshCw size={16} />}
           </Button>
         </div>
       }
@@ -274,18 +310,15 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                 cardIdleMessageKey={config.cardIdleMessageKey}
                 cardClassName={config.cardClassName}
                 defaultType={config.type}
+                canRefresh={!(disabled || loading || sectionLoading || quota[item.name]?.status === 'loading')}
+                onRefresh={() => void refreshQuotaForFile(item)}
                 renderQuotaItems={config.renderQuotaItems}
               />
             ))}
           </div>
           {filteredFiles.length > pageSize && effectiveViewMode === 'paged' && (
             <div className={styles.pagination}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={goToPrev}
-                disabled={currentPage <= 1}
-              >
+              <Button variant="secondary" size="sm" onClick={goToPrev} disabled={currentPage <= 1}>
                 {t('auth_files.pagination_prev')}
               </Button>
               <div className={styles.pageInfo}>

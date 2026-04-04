@@ -5,6 +5,8 @@
 import { useTranslation } from 'react-i18next';
 import type { ReactElement, ReactNode } from 'react';
 import type { TFunction } from 'i18next';
+import { Button } from '@/components/ui/Button';
+import { IconRefreshCw } from '@/components/ui/icons';
 import type { AuthFileItem, ResolvedTheme, ThemeColors } from '@/types';
 import { TYPE_COLORS } from '@/utils/quota';
 import styles from '@/pages/QuotaPage.module.scss';
@@ -64,6 +66,8 @@ interface QuotaCardProps<TState extends QuotaStatusState> {
   cardIdleMessageKey?: string;
   cardClassName: string;
   defaultType: string;
+  canRefresh?: boolean;
+  onRefresh?: () => void;
   renderQuotaItems: (quota: TState, t: TFunction, helpers: QuotaRenderHelpers) => ReactNode;
 }
 
@@ -75,6 +79,8 @@ export function QuotaCard<TState extends QuotaStatusState>({
   cardIdleMessageKey,
   cardClassName,
   defaultType,
+  canRefresh = false,
+  onRefresh,
   renderQuotaItems
 }: QuotaCardProps<TState>) {
   const { t } = useTranslation();
@@ -103,17 +109,36 @@ export function QuotaCard<TState extends QuotaStatusState>({
   return (
     <div className={`${styles.fileCard} ${cardClassName}`}>
       <div className={styles.cardHeader}>
-        <span
-          className={styles.typeBadge}
-          style={{
-            backgroundColor: typeColor.bg,
-            color: typeColor.text,
-            ...(typeColor.border ? { border: typeColor.border } : {})
-          }}
-        >
-          {getTypeLabel(displayType)}
-        </span>
-        <span className={styles.fileName}>{item.name}</span>
+        <div className={styles.cardHeaderMain}>
+          <span
+            className={styles.typeBadge}
+            style={{
+              backgroundColor: typeColor.bg,
+              color: typeColor.text,
+              ...(typeColor.border ? { border: typeColor.border } : {})
+            }}
+          >
+            {getTypeLabel(displayType)}
+          </span>
+          <span className={styles.fileName}>{item.name}</span>
+        </div>
+
+        {onRefresh ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={styles.cardRefreshButton}
+            onClick={onRefresh}
+            disabled={!canRefresh}
+            loading={quotaStatus === 'loading'}
+            title={t('auth_files.quota_refresh_hint')}
+            aria-label={t('auth_files.quota_refresh_single')}
+          >
+            {quotaStatus !== 'loading' && (
+              <IconRefreshCw size={14} className={styles.cardRefreshIcon} />
+            )}
+          </Button>
+        ) : null}
       </div>
 
       <div className={styles.quotaSection}>

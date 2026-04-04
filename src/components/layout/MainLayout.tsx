@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { PageTransition } from '@/components/common/PageTransition';
@@ -17,12 +17,10 @@ import {
   IconSidebarAuthFiles,
   IconSidebarConfig,
   IconSidebarDashboard,
-  IconSidebarLogs,
   IconSidebarOauth,
   IconSidebarProviders,
   IconSidebarQuota,
   IconSidebarSystem,
-  IconSidebarUsage,
 } from '@/components/ui/icons';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import {
@@ -43,9 +41,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   authFiles: <IconSidebarAuthFiles size={18} />,
   oauth: <IconSidebarOauth size={18} />,
   quota: <IconSidebarQuota size={18} />,
-  usage: <IconSidebarUsage size={18} />,
   config: <IconSidebarConfig size={18} />,
-  logs: <IconSidebarLogs size={18} />,
   system: <IconSidebarSystem size={18} />,
   monitor: <IconActivity size={18} />,
 };
@@ -207,13 +203,11 @@ const THEME_CARDS: Array<{
 export function MainLayout() {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
-  const location = useLocation();
 
   const apiBase = useAuthStore((state) => state.apiBase);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const logout = useAuthStore((state) => state.logout);
 
-  const config = useConfigStore((state) => state.config);
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const clearCache = useConfigStore((state) => state.clearCache);
 
@@ -235,7 +229,6 @@ export function MainLayout() {
 
   const fullBrandName = 'CLI Proxy API Management Center';
   const abbrBrandName = t('title.abbr');
-  const isLogsPage = location.pathname.startsWith('/logs');
 
   // 将顶栏高度写入 CSS 变量，确保侧栏/内容区计算一致，防止滚动时抖动
   useLayoutEffect(() => {
@@ -427,10 +420,6 @@ export function MainLayout() {
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
-    { path: '/usage', label: t('nav.usage_stats'), icon: sidebarIcons.usage },
-    ...(config?.loggingToFile
-      ? [{ path: '/logs', label: t('nav.logs'), icon: sidebarIcons.logs }]
-      : []),
     { path: '/system', label: t('nav.system_info'), icon: sidebarIcons.system },
     { path: '/monitor', label: t('nav.monitor'), icon: sidebarIcons.monitor },
   ];
@@ -713,8 +702,8 @@ export function MainLayout() {
           </div>
         </aside>
 
-        <div className={`content${isLogsPage ? ' content-logs' : ''}`} ref={contentRef}>
-          <main className={`main-content${isLogsPage ? ' main-content-logs' : ''}`}>
+        <div className="content" ref={contentRef}>
+          <main className="main-content">
             <PageTransition
               render={(location) => <MainRoutes location={location} />}
               getRouteOrder={getRouteOrder}

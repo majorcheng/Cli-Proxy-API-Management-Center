@@ -497,9 +497,37 @@
 
 .cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: $spacing-sm;
   min-height: 28px;
+}
+
+.cardHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+  flex: 1;
+}
+
+.cardRefreshButton:global(.btn.btn-sm) {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.cardRefreshButton:global(.btn.btn-sm) > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardRefreshIcon {
+  display: block;
 }
 
 .typeBadge {
@@ -512,6 +540,8 @@
 }
 
 .fileName {
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
