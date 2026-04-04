@@ -50,6 +50,10 @@ interface ChannelStat {
   models: Record<string, ModelStat>;
 }
 
+// 监控中心这里只保留请求量最高的前 5 个渠道，避免右侧卡片过高，
+// 同时让它与左侧 API 详细统计卡片保持一致的视觉高度。
+const MONITOR_CHANNEL_LIMIT = 5;
+
 export function ChannelStats({ data, loading, providerMap, providerModels, sourceInfoMap, authFileMap }: ChannelStatsProps) {
   const { t } = useTranslation();
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
@@ -194,7 +198,7 @@ export function ChannelStats({ data, loading, providerMap, providerModels, sourc
     return Object.values(stats)
       .filter((stat) => stat.totalRequests > 0)
       .sort((a, b) => b.totalRequests - a.totalRequests)
-      .slice(0, 8);
+      .slice(0, MONITOR_CHANNEL_LIMIT);
   }, [timeFilteredData, providerMap, sourceInfoMap, authFileMap]);
 
   // 获取所有渠道和模型列表
@@ -239,6 +243,7 @@ export function ChannelStats({ data, loading, providerMap, providerModels, sourc
     <>
       <Card
         title={t('monitor.channel.title')}
+        className={styles.monitorStatsCard}
         subtitle={
           <span>
             {formatTimeRangeCaption(timeRange, customRange, t)} · {t('monitor.channel.subtitle')}
@@ -287,7 +292,7 @@ export function ChannelStats({ data, loading, providerMap, providerModels, sourc
         </div>
 
         {/* 表格 */}
-        <div className={styles.tableWrapper}>
+        <div className={`${styles.tableWrapper} ${styles.monitorStatsTableWrapper}`}>
           {loading ? (
             <div className={styles.emptyState}>{t('common.loading')}</div>
           ) : filteredStats.length === 0 ? (

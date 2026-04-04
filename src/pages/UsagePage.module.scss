@@ -522,9 +522,11 @@
 .detailsScroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  // 不要用 contain，否则鼠标停在空白区时会截断外层页面的滚轮链路。
+  overscroll-behavior: auto;
 }
 
 // Table (80%比例)

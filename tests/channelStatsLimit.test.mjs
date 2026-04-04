@@ -7,6 +7,7 @@ const channelStatsSource = await readFile(
   'utf8',
 );
 
-test('渠道统计默认最多展示 8 个渠道，便于与左侧卡片保持横向高度接近', () => {
-  assert.match(channelStatsSource, /\.slice\(0, 8\);/);
+test('渠道统计默认最多展示 5 个渠道，避免右侧卡片过高并与左侧 API 详细统计对齐', () => {
+  assert.match(channelStatsSource, /const MONITOR_CHANNEL_LIMIT = 5;/);
+  assert.match(channelStatsSource, /\.slice\(0, MONITOR_CHANNEL_LIMIT\);/);
 });
