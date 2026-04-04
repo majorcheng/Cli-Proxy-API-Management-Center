@@ -77,6 +77,7 @@ import {
 } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/usage';
 import type { QuotaRenderHelpers } from './QuotaCard';
+import { compareCodexQuotaFiles } from './sort';
 import styles from '@/pages/QuotaPage.module.scss';
 
 type QuotaUpdater<T> = T | ((prev: T) => T);
@@ -110,6 +111,7 @@ export interface QuotaConfig<TState, TData> {
   cardIdleMessageKey?: string;
   defaultPagedPageSize?: number;
   filterFn: (file: AuthFileItem) => boolean;
+  compareFiles?: (a: AuthFileItem, b: AuthFileItem, quota: Record<string, TState>) => number;
   fetchQuota: (file: AuthFileItem, t: TFunction) => Promise<TData>;
   storeSelector: (state: QuotaStore) => Record<string, TState>;
   storeSetter: keyof QuotaStore;
@@ -1150,6 +1152,7 @@ export const CODEX_CONFIG: QuotaConfig<
   cardIdleMessageKey: 'quota_management.card_idle_hint',
   defaultPagedPageSize: 20,
   filterFn: (file) => isCodexFile(file) && !isDisabledAuthFile(file),
+  compareFiles: compareCodexQuotaFiles,
   fetchQuota: fetchCodexQuota,
   storeSelector: (state) => state.codexQuota,
   storeSetter: 'setCodexQuota',
