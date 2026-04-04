@@ -11,6 +11,7 @@ import {
   loadModelPrices,
 } from '@/utils/usage';
 import type { UsageData } from '@/pages/MonitorPage';
+import styles from '@/pages/MonitorPage.module.scss';
 
 interface ApiDetailsStatsCardProps {
   data: UsageData | null;
@@ -46,6 +47,7 @@ export function ApiDetailsStatsCard({ data, loading }: ApiDetailsStatsCardProps)
       apiStats={apiStats}
       loading={loading}
       hasPrices={hasModelPrices}
+      cardClassName={styles.monitorApiDetailsCard}
       subtitle={formatTimeRangeCaption(timeRange, customRange, t)}
       extra={
         <TimeRangeSelector

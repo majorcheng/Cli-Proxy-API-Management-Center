@@ -14,6 +14,7 @@ export interface ApiDetailsCardProps {
   subtitle?: ReactNode;
   extra?: ReactNode;
   showLatestClientIp?: boolean;
+  cardClassName?: string;
 }
 
 type ApiSortKey = 'endpoint' | 'requests' | 'tokens' | 'cost';
@@ -27,6 +28,7 @@ export function ApiDetailsCard({
   subtitle,
   extra,
   showLatestClientIp = false,
+  cardClassName,
 }: ApiDetailsCardProps) {
   const { t } = useTranslation();
   const [expandedApis, setExpandedApis] = useState<Set<string>>(new Set());
@@ -78,7 +80,11 @@ export function ApiDetailsCard({
       title={title ?? t('usage_stats.api_details')}
       subtitle={subtitle}
       extra={extra}
-      className={styles.detailsFixedCard}
+      className={
+        cardClassName
+          ? `${styles.detailsFixedCard} ${cardClassName}`
+          : styles.detailsFixedCard
+      }
     >
       {loading ? (
         <div className={styles.hint}>{t('common.loading')}</div>

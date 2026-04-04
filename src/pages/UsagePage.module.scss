@@ -509,13 +509,16 @@
 
 // Fixed-height cards with internal scrolling (API details / model stats)
 .detailsFixedCard {
+  --details-card-height: 520px;
+  --details-card-height-mobile: 420px;
+
   display: flex;
   flex-direction: column;
-  height: 520px;
+  height: var(--details-card-height);
   overflow: hidden;
 
   @include mobile {
-    height: 420px;
+    height: var(--details-card-height-mobile);
   }
 }
 

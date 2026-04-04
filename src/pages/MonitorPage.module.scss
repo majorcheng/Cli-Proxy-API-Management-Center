@@ -365,16 +365,22 @@
 }
 
 // 监控中心左侧 API 详细统计与右侧渠道统计需要保持同高；
+// 现在渠道统计只展示前 5 项，因此整体高度也同步收口，避免下方留出过大空白。
 // 右侧再通过表格区内部滚动承接展开内容，避免把整行高度继续撑开。
 .monitorStatsCard {
   display: flex;
   flex-direction: column;
-  height: 520px;
+  height: 430px;
   overflow: hidden;
 
   @include mobile {
-    height: 420px;
+    height: 360px;
   }
+}
+
+.monitorApiDetailsCard {
+  --details-card-height: 430px;
+  --details-card-height-mobile: 360px;
 }
 
 .monitorStatsTableWrapper {
