@@ -581,7 +581,9 @@
 // 虚拟滚动表格固定列宽
 .virtualTable {
   table-layout: fixed;
-  min-width: 1320px;
+  // 请求日志新增“命中（百分比）”后，需要同步扩列宽配置；
+  // 否则最后一列会吞掉多余宽度，表现为左侧列挤在一起、右侧留出大片空白。
+  min-width: 1450px;
 
   th, td {
     overflow: hidden;
@@ -610,13 +612,15 @@
   // 请求数
   th:nth-child(10), td:nth-child(10) { width: 70px; }
   // 输入
-  th:nth-child(11), td:nth-child(11) { width: 60px; }
+  th:nth-child(11), td:nth-child(11) { width: 80px; }
+  // 命中（百分比）
+  th:nth-child(12), td:nth-child(12) { width: 130px; }
   // 输出
-  th:nth-child(12), td:nth-child(12) { width: 60px; }
+  th:nth-child(13), td:nth-child(13) { width: 80px; }
   // 总 Token
-  th:nth-child(13), td:nth-child(13) { width: 70px; }
+  th:nth-child(14), td:nth-child(14) { width: 90px; }
   // 时间
-  th:nth-child(14), td:nth-child(14) { width: 150px; }
+  th:nth-child(15), td:nth-child(15) { width: 150px; }
 }
 
 .table {

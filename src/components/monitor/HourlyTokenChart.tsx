@@ -8,6 +8,7 @@ import {
   formatMonitorTokenDisplayValue,
   getMonitorTokenAxisTitle,
 } from '@/utils/monitorTokenUnit';
+import { extractMonitorHitTokens } from '@/utils/monitorTokenStats';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface HourlyTokenChartProps {
@@ -25,7 +26,7 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
 
   // 按小时聚合 Token 数据
   const hourlyData = useMemo(() => {
-    if (!data?.apis) return { hours: [], totalTokens: [], inputTokens: [], outputTokens: [], reasoningTokens: [], cachedTokens: [] };
+    if (!data?.apis) return { hours: [], totalTokens: [], inputTokens: [], outputTokens: [], hitTokens: [] };
 
     const { start: cutoffTime, end: currentHour, bucketCount } = getHourlyRangeBounds(hourRange);
 
@@ -41,11 +42,10 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
       total: number;
       input: number;
       output: number;
-      reasoning: number;
-      cached: number;
+      hit: number;
     }> = {};
     allHours.forEach((hour) => {
-      hourlyStats[hour] = { total: 0, input: 0, output: 0, reasoning: 0, cached: 0 };
+      hourlyStats[hour] = { total: 0, input: 0, output: 0, hit: 0 };
     });
 
     // 收集每小时的 Token 数据（只统计成功请求）
@@ -61,13 +61,13 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
 
           const hourKey = formatLocalHourKey(timestamp);
           if (!hourlyStats[hourKey]) {
-            hourlyStats[hourKey] = { total: 0, input: 0, output: 0, reasoning: 0, cached: 0 };
+            hourlyStats[hourKey] = { total: 0, input: 0, output: 0, hit: 0 };
           }
           hourlyStats[hourKey].total += detail.tokens.total_tokens || 0;
           hourlyStats[hourKey].input += detail.tokens.input_tokens || 0;
           hourlyStats[hourKey].output += detail.tokens.output_tokens || 0;
-          hourlyStats[hourKey].reasoning += detail.tokens.reasoning_tokens || 0;
-          hourlyStats[hourKey].cached += detail.tokens.cached_tokens || 0;
+          // 小时图里的“命中 Token”沿用 usage 快照的 cached/cache tokens 语义。
+          hourlyStats[hourKey].hit += extractMonitorHitTokens(detail.tokens);
         });
       });
     });
@@ -80,8 +80,7 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
       totalTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.total || 0)),
       inputTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.input || 0)),
       outputTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.output || 0)),
-      reasoningTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.reasoning || 0)),
-      cachedTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.cached || 0)),
+      hitTokens: hours.map((h) => convertMonitorTokensToDisplayValue(hourlyStats[h]?.hit || 0)),
     };
   }, [data, hourRange]);
 
@@ -126,6 +125,20 @@ export function HourlyTokenChart({ data, loading, isDark }: HourlyTokenChartProp
           order: 0,
           pointRadius: 3,
           pointBackgroundColor: '#f97316',
+        },
+        {
+          type: 'line' as const,
+          label: t('monitor.hourly_token.hit'),
+          data: hourlyData.hitTokens,
+          borderColor: '#8b5cf6',
+          backgroundColor: '#8b5cf6',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          tension: 0.35,
+          yAxisID: 'y',
+          order: 0,
+          pointRadius: 3,
+          pointBackgroundColor: '#8b5cf6',
         },
         {
           type: 'bar' as const,

@@ -1525,6 +1525,7 @@
       "rate": "Success Rate",
       "tokens": "Tokens",
       "input": "Input",
+      "hit": "Hit",
       "output": "Output",
       "reasoning": "Reasoning",
       "cached": "Cached",
@@ -1570,6 +1571,7 @@
       "subtitle": "By Hour",
       "total": "Total Tokens",
       "input": "Input",
+      "hit": "Hit",
       "output": "Output",
       "reasoning": "Reasoning",
       "cached": "Cached"
@@ -1644,6 +1646,7 @@
       "header_rate": "Success Rate",
       "header_count": "Requests",
       "header_input": "Input",
+      "header_hit": "Hit (%)",
       "header_output": "Output",
       "header_total": "Total Tokens",
       "header_latency": "Response Time",

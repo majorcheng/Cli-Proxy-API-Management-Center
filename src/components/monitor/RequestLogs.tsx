@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { usageApi, authFilesApi } from '@/services/api';
 import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
 import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
+import { extractMonitorHitTokens, calculateMonitorHitRate } from '@/utils/monitorTokenStats';
 import { resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import {
@@ -43,6 +44,8 @@ interface LogEntry {
   maskedKey: string;
   failed: boolean;
   inputTokens: number;
+  hitTokens: number;
+  hitRate: number;
   outputTokens: number;
   totalTokens: number;
   clientIp: string;
@@ -233,6 +236,8 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             ? sourceInfo.displayName
             : null;
           const displayName = resolvedName ? `${resolvedName} (${masked})` : masked;
+          const inputTokens = detail.tokens.input_tokens || 0;
+          const hitTokens = extractMonitorHitTokens(detail.tokens);
           entries.push({
             id: `${idCounter++}`,
             timestamp: detail.timestamp,
@@ -246,7 +251,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             providerType,
             maskedKey: masked,
             failed: detail.failed,
-            inputTokens: detail.tokens.input_tokens || 0,
+            inputTokens,
+            hitTokens,
+            hitRate: calculateMonitorHitRate(inputTokens, hitTokens),
             outputTokens: detail.tokens.output_tokens || 0,
             totalTokens: detail.tokens.total_tokens || 0,
             // 新版后端会返回 client_ip；旧快照可能仍只有 auth_index，这里保留回退，
@@ -361,6 +368,10 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return num.toLocaleString('zh-CN');
   };
 
+  const formatHitDisplay = (hitTokens: number, hitRate: number) => {
+    return `${formatNumber(hitTokens)} (${(hitRate * 100).toFixed(1)}%)`;
+  };
+
   // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求
   const formatLatency = (latencyMs: number | null) => {
     if (latencyMs === null || Number.isNaN(latencyMs)) {
@@ -434,6 +445,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
         </td>
         <td>{formatNumber(stats.totalCount)}</td>
         <td>{formatNumber(entry.inputTokens)}</td>
+        <td title={formatHitDisplay(entry.hitTokens, entry.hitRate)}>
+          {formatHitDisplay(entry.hitTokens, entry.hitRate)}
+        </td>
         <td>{formatNumber(entry.outputTokens)}</td>
         <td>{formatNumber(entry.totalTokens)}</td>
         <td>{formatTimestamp(entry.timestamp)}</td>
@@ -547,6 +561,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
                   <th>{t('monitor.logs.header_rate')}</th>
                   <th>{t('monitor.logs.header_count')}</th>
                   <th>{t('monitor.logs.header_input')}</th>
+                  <th>{t('monitor.logs.header_hit')}</th>
                   <th>{t('monitor.logs.header_output')}</th>
                   <th>{t('monitor.logs.header_total')}</th>
                   <th>{t('monitor.logs.header_time')}</th>

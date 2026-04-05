@@ -1525,6 +1525,7 @@
       "rate": "成功率",
       "tokens": "Tokens",
       "input": "输入",
+      "hit": "命中",
       "output": "输出",
       "reasoning": "思考",
       "cached": "缓存",
@@ -1570,6 +1571,7 @@
       "subtitle": "按小时显示",
       "total": "总 Token",
       "input": "输入",
+      "hit": "命中",
       "output": "输出",
       "reasoning": "思考",
       "cached": "缓存"
@@ -1644,6 +1646,7 @@
       "header_rate": "成功率",
       "header_count": "请求数",
       "header_input": "输入",
+      "header_hit": "命中（百分比）",
       "header_output": "输出",
       "header_total": "总 Token",
       "header_latency": "响应时间",

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UsageData } from '@/pages/MonitorPage';
 import { formatPresetTimeRangeLabel, type PresetTimeRange } from '@/utils/monitor';
+import { calculateMonitorHitRate, extractMonitorHitTokens } from '@/utils/monitorTokenStats';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface KpiCardsProps {
@@ -39,6 +40,8 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
         successRate: 0,
         totalTokens: 0,
         inputTokens: 0,
+        hitTokens: 0,
+        hitRate: 0,
         outputTokens: 0,
         reasoningTokens: 0,
         cachedTokens: 0,
@@ -53,6 +56,7 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
     let failedRequests = 0;
     let totalTokens = 0;
     let inputTokens = 0;
+    let hitTokens = 0;
     let outputTokens = 0;
     let reasoningTokens = 0;
     let cachedTokens = 0;
@@ -73,6 +77,8 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
 
           totalTokens += detail.tokens.total_tokens || 0;
           inputTokens += detail.tokens.input_tokens || 0;
+          // 监控中心把 usage snapshot 里的 cached/cache tokens 统一展示为“命中 Token”。
+          hitTokens += extractMonitorHitTokens(detail.tokens);
           outputTokens += detail.tokens.output_tokens || 0;
           reasoningTokens += detail.tokens.reasoning_tokens || 0;
           cachedTokens += detail.tokens.cached_tokens || 0;
@@ -85,6 +91,7 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
     });
 
     const successRate = totalRequests > 0 ? (successRequests / totalRequests) * 100 : 0;
+    const hitRate = calculateMonitorHitRate(inputTokens, hitTokens) * 100;
 
     // 计算 TPM 和 RPM（基于实际时间跨度）
     let avgTpm = 0;
@@ -107,6 +114,8 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
       successRate,
       totalTokens,
       inputTokens,
+      hitTokens,
+      hitRate,
       outputTokens,
       reasoningTokens,
       cachedTokens,
@@ -166,6 +175,9 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
         </div>
         <div className={styles.kpiMeta}>
           <span>{t('monitor.kpi.input')}: {loading ? '--' : formatNumber(stats.inputTokens)}</span>
+          <span>
+            {t('monitor.kpi.hit')}: {loading ? '--' : `${formatNumber(stats.hitTokens)} (${stats.hitRate.toFixed(1)}%)`}
+          </span>
           <span>{t('monitor.kpi.output')}: {loading ? '--' : formatNumber(stats.outputTokens)}</span>
         </div>
       </div>
