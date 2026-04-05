@@ -6,12 +6,13 @@ import {
   type ServiceHealthData,
   type StatusBlockDetail,
 } from '@/utils/usage';
+import { resolveServiceHealthTooltipIndex } from './serviceHealthTooltipState';
 import styles from '@/pages/UsagePage.module.scss';
 
 const COLOR_STOPS = [
-  { r: 239, g: 68, b: 68 },   // #ef4444
-  { r: 250, g: 204, b: 21 },  // #facc15
-  { r: 34, g: 197, b: 94 },   // #22c55e
+  { r: 239, g: 68, b: 68 }, // #ef4444
+  { r: 250, g: 204, b: 21 }, // #facc15
+  { r: 34, g: 197, b: 94 }, // #22c55e
 ] as const;
 
 function rateToColor(rate: number): string {
@@ -52,9 +53,16 @@ export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
   }, [usage]);
 
   const hasData = healthData.totalSuccess + healthData.totalFailure > 0;
+  const normalizedActiveTooltip = resolveServiceHealthTooltipIndex(
+    activeTooltip,
+    healthData.blockDetails.length
+  );
+
+  // 当前 tooltip 仍是内嵌渲染，不需要整套 portal anchor 迁移；
+  // 这里仅把展示中的索引收敛为合法范围，避免数据刷新后继续引用失效项。
 
   useEffect(() => {
-    if (activeTooltip === null) return;
+    if (normalizedActiveTooltip === null) return;
     const handler = (e: PointerEvent) => {
       if (gridRef.current && !gridRef.current.contains(e.target as Node)) {
         setActiveTooltip(null);
@@ -62,7 +70,7 @@ export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
     };
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
-  }, [activeTooltip]);
+  }, [normalizedActiveTooltip]);
 
   const handlePointerEnter = useCallback((e: React.PointerEvent, idx: number) => {
     if (e.pointerType === 'mouse') {
@@ -107,8 +115,12 @@ export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
         <span className={styles.healthTooltipTime}>{timeRange}</span>
         {total > 0 ? (
           <span className={styles.healthTooltipStats}>
-            <span className={styles.healthTooltipSuccess}>{t('status_bar.success_short')} {detail.success}</span>
-            <span className={styles.healthTooltipFailure}>{t('status_bar.failure_short')} {detail.failure}</span>
+            <span className={styles.healthTooltipSuccess}>
+              {t('status_bar.success_short')} {detail.success}
+            </span>
+            <span className={styles.healthTooltipFailure}>
+              {t('status_bar.failure_short')} {detail.failure}
+            </span>
             <span className={styles.healthTooltipRate}>({(detail.rate * 100).toFixed(1)}%)</span>
           </span>
         ) : (
@@ -138,32 +150,29 @@ export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
         </div>
       </div>
       <div className={styles.healthGridScroller}>
-        <div
-          className={styles.healthGrid}
-          ref={gridRef}
-        >
-        {healthData.blockDetails.map((detail, idx) => {
-          const isIdle = detail.rate === -1;
-          const blockStyle = isIdle ? undefined : { backgroundColor: rateToColor(detail.rate) };
-          const isActive = activeTooltip === idx;
+        <div className={styles.healthGrid} ref={gridRef}>
+          {healthData.blockDetails.map((detail, idx) => {
+            const isIdle = detail.rate === -1;
+            const blockStyle = isIdle ? undefined : { backgroundColor: rateToColor(detail.rate) };
+            const isActive = normalizedActiveTooltip === idx;
 
-          return (
-            <div
-              key={idx}
-              className={`${styles.healthBlockWrapper} ${isActive ? styles.healthBlockActive : ''}`}
-              onPointerEnter={(e) => handlePointerEnter(e, idx)}
-              onPointerLeave={handlePointerLeave}
-              onPointerDown={(e) => handlePointerDown(e, idx)}
-            >
+            return (
               <div
-                className={`${styles.healthBlock} ${isIdle ? styles.healthBlockIdle : ''}`}
-                style={blockStyle}
-              />
-              {isActive && renderTooltip(detail, idx)}
-            </div>
-          );
-        })}
-      </div>
+                key={idx}
+                className={`${styles.healthBlockWrapper} ${isActive ? styles.healthBlockActive : ''}`}
+                onPointerEnter={(e) => handlePointerEnter(e, idx)}
+                onPointerLeave={handlePointerLeave}
+                onPointerDown={(e) => handlePointerDown(e, idx)}
+              >
+                <div
+                  className={`${styles.healthBlock} ${isIdle ? styles.healthBlockIdle : ''}`}
+                  style={blockStyle}
+                />
+                {isActive && renderTooltip(detail, idx)}
+              </div>
+            );
+          })}
+        </div>
       </div>
       <div className={styles.healthLegend}>
         <span className={styles.healthLegendLabel}>{t('service_health.oldest')}</span>
