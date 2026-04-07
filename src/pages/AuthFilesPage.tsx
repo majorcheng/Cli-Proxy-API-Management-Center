@@ -104,11 +104,13 @@ export function AuthFilesPage() {
     deletingAll,
     statusUpdating,
     batchStatusUpdating,
+    codexRefreshing,
     fileInputRef,
     loadFiles,
     handleUploadClick,
     handleFileChange,
     handleDeleteAll,
+    refreshCodexForFile,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,
@@ -784,7 +786,9 @@ export function AuthFilesPage() {
                     statusBarCache={statusBarCache}
                     onShowModels={showModels}
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}
+                    onRefreshCodex={refreshCodexForFile}
                     onToggleSelect={toggleSelect}
+                    codexRefreshing={codexRefreshing[file.name] === true}
                   />
                 ))}
               </div>

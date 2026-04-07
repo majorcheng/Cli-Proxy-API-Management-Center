@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi } from '@/services/api';
+import { authFilesApi, type AuthFilesCodexRefreshApiError } from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import { downloadBlob } from '@/utils/download';
+import { normalizeAuthIndex } from '@/utils/usage';
 import { isRuntimeOnlyAuthFile } from '@/features/authFiles/constants';
 import { applyAuthFilesScopeFilters } from '@/features/authFiles/filters';
 
@@ -33,6 +34,7 @@ export type UseAuthFilesDataResult = {
   deletingAll: boolean;
   statusUpdating: Record<string, boolean>;
   batchStatusUpdating: boolean;
+  codexRefreshing: Record<string, boolean>;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: () => Promise<void>;
   handleUploadClick: () => void;
@@ -41,6 +43,7 @@ export type UseAuthFilesDataResult = {
   handleDeleteAll: (options: DeleteAllOptions) => void;
   handleDownload: (name: string) => Promise<void>;
   handleStatusToggle: (item: AuthFileItem, enabled: boolean) => Promise<void>;
+  refreshCodexForFile: (item: AuthFileItem) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   invertVisibleSelection: (visibleFiles: AuthFileItem[]) => void;
@@ -52,6 +55,39 @@ export type UseAuthFilesDataResult = {
 
 export type UseAuthFilesDataOptions = {
   refreshKeyStats: () => Promise<void>;
+};
+
+const isCodexAuthFile = (file: AuthFileItem): boolean => {
+  const provider = String(file.provider ?? file.type ?? '').trim().toLowerCase();
+  return provider === 'codex';
+};
+
+const mergeRefreshedAuthFile = (items: AuthFileItem[], nextFile: AuthFileItem | null | undefined): AuthFileItem[] => {
+  if (!nextFile) return items;
+
+  // 后端返回的 file 在成功/失败场景下字段完整度不同，这里做浅合并而不是整项替换，
+  // 以保住当前列表里已经有的 size/modtime 等展示字段。
+  const nextAuthIndex = normalizeAuthIndex(nextFile['auth_index'] ?? nextFile.authIndex);
+  const nextName = String(nextFile.name ?? '').trim();
+  if (!nextAuthIndex && !nextName) return items;
+
+  let changed = false;
+  const merged = items.map((item) => {
+    const currentAuthIndex = normalizeAuthIndex(item['auth_index'] ?? item.authIndex);
+    const matched =
+      (nextAuthIndex && currentAuthIndex === nextAuthIndex) ||
+      String(item.name ?? '').trim() === nextName;
+    if (!matched) return item;
+    changed = true;
+    return { ...item, ...nextFile };
+  });
+
+  return changed ? merged : items;
+};
+
+const resolveCodexRefreshNotificationType = (status?: number): 'success' | 'info' | 'warning' | 'error' => {
+  if (status === 409) return 'warning';
+  return 'error';
 };
 
 export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFilesDataResult {
@@ -67,6 +103,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
+  const [codexRefreshing, setCodexRefreshing] = useState<Record<string, boolean>>({});
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -135,6 +172,23 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       return changed ? next : prev;
     });
   }, [files, selectedFiles.size]);
+
+  useEffect(() => {
+    if (Object.keys(codexRefreshing).length === 0) return;
+    const existingNames = new Set(files.map((file) => file.name));
+    setCodexRefreshing((prev) => {
+      let changed = false;
+      const next: Record<string, boolean> = {};
+      Object.entries(prev).forEach(([name, refreshing]) => {
+        if (refreshing && existingNames.has(name)) {
+          next[name] = true;
+          return;
+        }
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [codexRefreshing, files]);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -563,6 +617,55 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [showNotification, t]
   );
 
+
+  const refreshCodexForFile = useCallback(
+    async (item: AuthFileItem) => {
+      const name = String(item.name ?? '').trim();
+      if (!name || isRuntimeOnlyAuthFile(item) || !isCodexAuthFile(item) || item.disabled === true) {
+        return;
+      }
+      if (item.has_refresh_token !== true) {
+        showNotification(t('auth_files.codex_rt_refresh_missing_rt'), 'warning');
+        return;
+      }
+      if (codexRefreshing[name]) {
+        return;
+      }
+
+      const authIndex = normalizeAuthIndex(item['auth_index'] ?? item.authIndex);
+      setCodexRefreshing((prev) => ({ ...prev, [name]: true }));
+
+      try {
+        const response = await authFilesApi.refreshCodexAuthFile({
+          auth_index: authIndex || undefined,
+          name,
+        });
+        if (response.file) {
+          setFiles((prev) => mergeRefreshedAuthFile(prev, response.file));
+        }
+        showNotification(t('auth_files.codex_rt_refresh_success', { name }), 'success');
+      } catch (err: unknown) {
+        const refreshError = err as AuthFilesCodexRefreshApiError;
+        if (refreshError.file) {
+          setFiles((prev) => mergeRefreshedAuthFile(prev, refreshError.file ?? null));
+        }
+        const message = refreshError instanceof Error ? refreshError.message : t('common.unknown_error');
+        showNotification(
+          t('auth_files.codex_rt_refresh_failed', { name, message }),
+          resolveCodexRefreshNotificationType(refreshError.status)
+        );
+      } finally {
+        setCodexRefreshing((prev) => {
+          if (!prev[name]) return prev;
+          const next = { ...prev };
+          delete next[name];
+          return next;
+        });
+      }
+    },
+    [codexRefreshing, showNotification, t]
+  );
+
   const batchDelete = useCallback(
     (names: string[]) => {
       const uniqueNames = Array.from(new Set(names));
@@ -640,6 +743,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     deletingAll,
     statusUpdating,
     batchStatusUpdating,
+    codexRefreshing,
     fileInputRef,
     loadFiles,
     handleUploadClick,
@@ -648,6 +752,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     handleDeleteAll,
     handleDownload,
     handleStatusToggle,
+    refreshCodexForFile,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,

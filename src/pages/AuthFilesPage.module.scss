@@ -1978,6 +1978,16 @@
   gap: 0;
 }
 
+.cardRefreshButton:global(.btn.btn-sm) > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardRefreshIcon {
+  display: block;
+}
+
 .actionIcon {
   display: block;
 }

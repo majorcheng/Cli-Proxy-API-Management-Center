@@ -9,6 +9,15 @@ import type { OAuthModelAliasEntry } from '@/types';
 type StatusError = { status?: number };
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
+type CodexRefreshResponse = { status?: string; file?: AuthFileEntry };
+export type RefreshCodexAuthFileRequest = {
+  auth_index?: string | null;
+  name: string;
+};
+export type AuthFilesCodexRefreshApiError = Error & {
+  status?: number;
+  file?: AuthFileEntry | null;
+};
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
 
@@ -16,6 +25,21 @@ const getStatusCode = (err: unknown): number | undefined => {
   if (!err || typeof err !== 'object') return undefined;
   if ('status' in err) return (err as StatusError).status;
   return undefined;
+};
+
+const getErrorData = (err: unknown): Record<string, unknown> | null => {
+  if (!err || typeof err !== 'object') return null;
+  if ('data' in err && err.data && typeof err.data === 'object') {
+    return err.data as Record<string, unknown>;
+  }
+  return null;
+};
+
+const getErrorFileEntry = (err: unknown): AuthFileEntry | null => {
+  const data = getErrorData(err);
+  if (!data) return null;
+  const file = data.file;
+  return file && typeof file === 'object' ? (file as AuthFileEntry) : null;
 };
 
 const readTextField = (entry: AuthFileEntry, key: string): string => {
@@ -279,6 +303,23 @@ export const authFilesApi = {
 
   saveJsonObject: (name: string, json: Record<string, unknown>) =>
     saveAuthFileText(name, JSON.stringify(json)),
+
+  refreshCodexAuthFile: async (payload: RefreshCodexAuthFileRequest): Promise<CodexRefreshResponse> => {
+    const authIndex = typeof payload.auth_index === 'string' ? payload.auth_index.trim() : '';
+    const name = String(payload.name ?? '').trim();
+
+    try {
+      return await apiClient.post<CodexRefreshResponse>('/auth-files/codex/refresh', {
+        auth_index: authIndex || undefined,
+        name,
+      });
+    } catch (err: unknown) {
+      const error = new Error(err instanceof Error ? err.message : 'Request failed') as AuthFilesCodexRefreshApiError;
+      error.status = getStatusCode(err);
+      error.file = getErrorFileEntry(err);
+      throw error;
+    }
+  },
 
   // OAuth 排除模型
   async getOauthExcludedModels(): Promise<Record<string, string[]>> {

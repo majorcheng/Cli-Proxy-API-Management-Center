@@ -622,7 +622,12 @@
     "quota_refresh_single": "刷新额度",
     "quota_refresh_hint": "仅刷新这个凭证的额度",
     "quota_refresh_success": "已刷新 \"{{name}}\" 的额度",
-    "quota_refresh_failed": "刷新 \"{{name}}\" 的额度失败：{{message}}"
+    "quota_refresh_failed": "刷新 \"{{name}}\" 的额度失败：{{message}}",
+    "codex_rt_refresh_single": "刷新 RT",
+    "codex_rt_refresh_hint": "仅刷新这个 Codex 凭证的 RT",
+    "codex_rt_refresh_missing_rt": "当前凭证缺少 refresh_token，无法手动刷新",
+    "codex_rt_refresh_success": "已刷新 \"{{name}}\" 的 RT",
+    "codex_rt_refresh_failed": "刷新 \"{{name}}\" 的 RT 失败：{{message}}"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",

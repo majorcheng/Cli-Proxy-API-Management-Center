@@ -622,7 +622,12 @@
     "quota_refresh_single": "Refresh quota",
     "quota_refresh_hint": "Refresh quota for this credential only",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
-    "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}"
+    "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
+    "codex_rt_refresh_single": "Refresh RT",
+    "codex_rt_refresh_hint": "Refresh RT for this Codex credential only",
+    "codex_rt_refresh_missing_rt": "This credential has no refresh_token and cannot be refreshed manually",
+    "codex_rt_refresh_success": "RT refreshed for \"{{name}}\"",
+    "codex_rt_refresh_failed": "Failed to refresh RT for \"{{name}}\": {{message}}"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",

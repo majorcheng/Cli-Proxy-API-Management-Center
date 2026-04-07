@@ -619,7 +619,12 @@
     "quota_refresh_single": "Обновить квоту",
     "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
-    "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}"
+    "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
+    "codex_rt_refresh_single": "Обновить RT",
+    "codex_rt_refresh_hint": "Обновить RT только для этих учётных данных Codex",
+    "codex_rt_refresh_missing_rt": "У этих учётных данных нет refresh_token, ручное обновление недоступно",
+    "codex_rt_refresh_success": "RT для \"{{name}}\" обновлён",
+    "codex_rt_refresh_failed": "Не удалось обновить RT для \"{{name}}\": {{message}}"
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",

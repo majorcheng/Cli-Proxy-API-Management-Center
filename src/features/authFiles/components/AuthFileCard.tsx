@@ -4,6 +4,7 @@ import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import {
   IconInfo,
   IconModelCluster,
+  IconRefreshCw,
   IconSettings,
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
@@ -46,7 +47,9 @@ export type AuthFileCardProps = {
   statusBarCache: Map<string, AuthFileStatusBarData>;
   onShowModels: (file: AuthFileItem) => void;
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
+  onRefreshCodex: (file: AuthFileItem) => void;
   onToggleSelect: (name: string) => void;
+  codexRefreshing: boolean;
 };
 
 const resolveQuotaType = (file: AuthFileItem): QuotaProviderType | null => {
@@ -66,7 +69,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
     statusBarCache,
     onShowModels,
     onOpenPrefixProxyEditor,
+    onRefreshCodex,
     onToggleSelect,
+    codexRefreshing,
   } = props;
 
   const fileStats = resolveAuthFileStats(file, keyStats);
@@ -130,6 +135,11 @@ export function AuthFileCard(props: AuthFileCardProps) {
         ? styles.stateBadgeWarning
         : styles.stateBadgeActive;
   const showPrefixProxyButton = !isRuntimeOnly;
+  const hasCodexRefreshToken = file.has_refresh_token === true;
+  const canRefreshCodex = isCodexAuthFile && file.disabled !== true && hasCodexRefreshToken;
+  const codexRefreshTitle = hasCodexRefreshToken
+    ? t('auth_files.codex_rt_refresh_hint')
+    : t('auth_files.codex_rt_refresh_missing_rt');
   const hasCardActions = isCodexAuthFile || showModelsButton || showPrefixProxyButton;
 
   return (
@@ -266,6 +276,22 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 )}
                 {showPrefixProxyButton && (
                   <div className={styles.cardUtilityActions}>
+                    {isCodexAuthFile && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onRefreshCodex(file)}
+                        className={`${styles.iconButton} ${styles.cardRefreshButton}`}
+                        title={codexRefreshTitle}
+                        aria-label={t('auth_files.codex_rt_refresh_single')}
+                        disabled={disableControls || !canRefreshCodex}
+                        loading={codexRefreshing}
+                      >
+                        {!codexRefreshing && (
+                          <IconRefreshCw className={`${styles.actionIcon} ${styles.cardRefreshIcon}`} size={16} />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       size="sm"
