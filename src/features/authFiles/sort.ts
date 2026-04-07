@@ -78,6 +78,10 @@ export const compareCodexAuthFilesByPlanAndFirstRegisteredAt = (
     resolveCodexPlanOrder(a, resolvePlanType) - resolveCodexPlanOrder(b, resolvePlanType);
   if (planOrderDiff !== 0) return planOrderDiff;
 
+  // 和 CPA 语义保持一致：先锁定套餐层级，再在同套餐内按 priority 选更优先的账号。
+  const priorityDiff = compareAuthFilesByPriority(a, b);
+  if (priorityDiff !== 0) return priorityDiff;
+
   const firstRegisteredDiff = compareAuthFilesByFirstRegisteredAt(a, b);
   if (firstRegisteredDiff !== 0) return firstRegisteredDiff;
 
@@ -88,14 +92,11 @@ const resolveAuthFilePriority = (file: AuthFileItem): number =>
   parsePriorityValue(file.priority ?? file['priority']) ?? 0;
 
 export const compareAuthFilesByPriority = (a: AuthFileItem, b: AuthFileItem): number => {
-  // 默认排序先对齐 CPA 的 priority 语义：数值越大，表示越应该优先被使用和展示。
+  // priority 数值越大，表示越应该优先被使用和展示。
   return resolveAuthFilePriority(b) - resolveAuthFilePriority(a);
 };
 
 export const compareAuthFilesByDefaultSort = (a: AuthFileItem, b: AuthFileItem): number => {
-  const priorityDiff = compareAuthFilesByPriority(a, b);
-  if (priorityDiff !== 0) return priorityDiff;
-
   const providerA = normalizeProviderKey(String(a.provider ?? a.type ?? 'unknown'));
   const providerB = normalizeProviderKey(String(b.provider ?? b.type ?? 'unknown'));
 

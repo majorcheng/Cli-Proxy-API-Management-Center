@@ -86,6 +86,11 @@ const authFileSortModuleUrl = `data:text/javascript;base64,${Buffer.from(
     const planOrderDiff = resolveCodexPlanOrder(a, resolvePlanType) - resolveCodexPlanOrder(b, resolvePlanType);
     if (planOrderDiff !== 0) return planOrderDiff;
 
+    const priorityA = Number.isInteger(a?.priority) ? a.priority : 0;
+    const priorityB = Number.isInteger(b?.priority) ? b.priority : 0;
+    const priorityDiff = priorityB - priorityA;
+    if (priorityDiff !== 0) return priorityDiff;
+
     const firstRegisteredDiff = compareAuthFilesByFirstRegisteredAt(a, b);
     if (firstRegisteredDiff !== 0) return firstRegisteredDiff;
 
@@ -119,12 +124,12 @@ const quotaConfigSource = await readFile(
   'utf8',
 );
 
-test('Codex 配额卡片按 pro、plus、team、free、unknown 分组排序', () => {
+test('Codex 配额卡片按 pro、plus、team、free、unknown 分组排序，priority 只在同套餐组内生效', () => {
   const files = [
-    { name: 'free.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
-    { name: 'team.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
-    { name: 'pro.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
-    { name: 'plus.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
+    { name: 'free.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', priority: 99 },
+    { name: 'team.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', priority: 50 },
+    { name: 'pro.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', priority: 1 },
+    { name: 'plus.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', priority: 0 },
     { name: 'unknown.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
   ];
   const quotaByName = {
@@ -144,23 +149,23 @@ test('Codex 配额卡片按 pro、plus、team、free、unknown 分组排序', ()
   ]);
 });
 
-test('同套餐组内按 first_registered_at 正序，老账号优先', () => {
+test('同套餐组内先按 priority 倒序，再按 first_registered_at 正序，老账号优先', () => {
   const files = [
-    { name: 'team-newer.json', provider: 'codex', first_registered_at: '2026-03-03T00:00:00Z' },
-    { name: 'team-older.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z' },
-    { name: 'team-middle.json', provider: 'codex', first_registered_at: '2026-03-02T00:00:00Z' },
+    { name: 'team-newer-high.json', provider: 'codex', first_registered_at: '2026-03-03T00:00:00Z', priority: 9 },
+    { name: 'team-older-low.json', provider: 'codex', first_registered_at: '2026-03-01T00:00:00Z', priority: 1 },
+    { name: 'team-middle-high.json', provider: 'codex', first_registered_at: '2026-03-02T00:00:00Z', priority: 9 },
   ];
   const quotaByName = {
-    'team-newer.json': { status: 'success', planType: 'team', windows: [] },
-    'team-older.json': { status: 'success', planType: 'team', windows: [] },
-    'team-middle.json': { status: 'success', planType: 'team', windows: [] },
+    'team-newer-high.json': { status: 'success', planType: 'team', windows: [] },
+    'team-older-low.json': { status: 'success', planType: 'team', windows: [] },
+    'team-middle-high.json': { status: 'success', planType: 'team', windows: [] },
   };
 
   files.sort((a, b) => compareCodexQuotaFiles(a, b, quotaByName));
   assert.deepEqual(files.map((file) => file.name), [
-    'team-older.json',
-    'team-middle.json',
-    'team-newer.json',
+    'team-middle-high.json',
+    'team-newer-high.json',
+    'team-older-low.json',
   ]);
 });
 
