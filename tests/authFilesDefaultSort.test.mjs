@@ -4,7 +4,23 @@ import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
 const constantsModuleUrl = `data:text/javascript;base64,${Buffer.from(
-  `export const normalizeProviderKey = (value) => String(value ?? '').trim().toLowerCase();`,
+  `
+  const INTEGER_STRING_PATTERN = /^[-+]?\d+$/;
+
+  export const normalizeProviderKey = (value) => String(value ?? '').trim().toLowerCase();
+
+  export const parsePriorityValue = (value) => {
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? value : undefined;
+    }
+
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed || !INTEGER_STRING_PATTERN.test(trimmed)) return undefined;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isSafeInteger(parsed) ? parsed : undefined;
+  };
+  `,
 ).toString('base64')}`;
 
 const quotaUtilsModuleUrl = `data:text/javascript;base64,${Buffer.from(
@@ -112,6 +128,40 @@ test('认证文件默认排序优先按 first_registered_at 正序，老账号�
   assert.deepEqual(
     files.map((file) => file.name),
     ['older.json', 'middle.json', 'newer.json'],
+  );
+});
+
+test('认证文件默认排序先按 priority 倒序，再回退到同优先级既有规则', () => {
+  const files = [
+    {
+      name: 'older-low.json',
+      provider: 'codex',
+      priority: 1,
+      first_registered_at: '2026-03-01T00:00:00Z',
+    },
+    {
+      name: 'newer-high.json',
+      provider: 'codex',
+      priority: 9,
+      first_registered_at: '2026-03-03T00:00:00Z',
+    },
+    {
+      name: 'same-priority-older.json',
+      provider: 'codex',
+      priority: 9,
+      first_registered_at: '2026-03-02T00:00:00Z',
+    },
+    {
+      name: 'default-priority.json',
+      provider: 'codex',
+      first_registered_at: '2026-03-04T00:00:00Z',
+    },
+  ];
+
+  files.sort(compareAuthFilesByDefaultSort);
+  assert.deepEqual(
+    files.map((file) => file.name),
+    ['same-priority-older.json', 'newer-high.json', 'older-low.json', 'default-priority.json'],
   );
 });
 

@@ -1,5 +1,5 @@
 import type { AuthFileItem } from '@/types';
-import { normalizeProviderKey } from '@/features/authFiles/constants';
+import { normalizeProviderKey, parsePriorityValue } from '@/features/authFiles/constants';
 import { normalizePlanType, resolveCodexPlanType } from '@/utils/quota';
 
 const CODEX_PLAN_ORDER: Record<string, number> = {
@@ -84,7 +84,18 @@ export const compareCodexAuthFilesByPlanAndFirstRegisteredAt = (
   return a.name.localeCompare(b.name);
 };
 
+const resolveAuthFilePriority = (file: AuthFileItem): number =>
+  parsePriorityValue(file.priority ?? file['priority']) ?? 0;
+
+export const compareAuthFilesByPriority = (a: AuthFileItem, b: AuthFileItem): number => {
+  // 默认排序先对齐 CPA 的 priority 语义：数值越大，表示越应该优先被使用和展示。
+  return resolveAuthFilePriority(b) - resolveAuthFilePriority(a);
+};
+
 export const compareAuthFilesByDefaultSort = (a: AuthFileItem, b: AuthFileItem): number => {
+  const priorityDiff = compareAuthFilesByPriority(a, b);
+  if (priorityDiff !== 0) return priorityDiff;
+
   const providerA = normalizeProviderKey(String(a.provider ?? a.type ?? 'unknown'));
   const providerB = normalizeProviderKey(String(b.provider ?? b.type ?? 'unknown'));
 
