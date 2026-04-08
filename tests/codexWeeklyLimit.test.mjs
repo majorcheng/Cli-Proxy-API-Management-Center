@@ -13,7 +13,7 @@ const transpiled = ts.transpileModule(sourceCode, {
 });
 
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(transpiled.outputText).toString('base64')}`;
-const { formatCompactDuration, resolveCodexWeeklyLimit } = await import(moduleUrl);
+const { formatCompactDuration, resolveCodexWeeklyLimit, resolveAuthFileUsedTokensWindow } = await import(moduleUrl);
 
 test('紧凑倒计时格式优先展示天和小时', () => {
   assert.equal(formatCompactDuration(6 * 24 * 60 * 60 * 1000 + 61 * 60 * 1000), '6d1h');
@@ -85,4 +85,37 @@ test('恢复时间已过期时显示已到期', () => {
   assert.equal(result.kind, 'expired');
   assert.equal(result.countdownLabel, '已到期');
   assert.equal(result.progressPercent, 0);
+});
+
+test('Codex 当前处于 429 周限时，已用窗口回退到上一整个周限周期', () => {
+  const nowMs = Date.parse('2026-04-01T12:00:00+08:00');
+  const result = resolveAuthFileUsedTokensWindow(
+    {
+      provider: 'codex',
+      next_retry_after: '2026-04-07T23:01:29+08:00',
+      updated_at: '2026-04-01T00:00:00+08:00',
+      status_message:
+        '{"error":{"type":"usage_limit_reached","resets_at":1775574090,"resets_in_seconds":601085}}',
+    },
+    nowMs,
+  );
+
+  assert.equal(result.kind, 'codex_previous_weekly_cycle');
+  assert.equal(result.endMs, Date.parse('2026-04-07T23:01:29+08:00'));
+  assert.equal(result.startMs, Date.parse('2026-03-31T23:01:29+08:00'));
+});
+
+test('非 Codex 或未命中周限时，已用窗口默认为最近 7 天', () => {
+  const nowMs = Date.parse('2026-04-08T00:00:00+08:00');
+  const result = resolveAuthFileUsedTokensWindow(
+    {
+      provider: 'claude',
+      status_message: 'ok',
+    },
+    nowMs,
+  );
+
+  assert.equal(result.kind, 'rolling_7d');
+  assert.equal(result.startMs, Date.parse('2026-04-01T00:00:00+08:00'));
+  assert.equal(result.endMs, nowMs);
 });

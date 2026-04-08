@@ -44,6 +44,7 @@ export type AuthFileCardProps = {
   resolvedTheme: ResolvedTheme;
   disableControls: boolean;
   keyStats: KeyStats;
+  usedTokens: number;
   statusBarCache: Map<string, AuthFileStatusBarData>;
   onShowModels: (file: AuthFileItem) => void;
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
@@ -66,6 +67,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     resolvedTheme,
     disableControls,
     keyStats,
+    usedTokens,
     statusBarCache,
     onShowModels,
     onOpenPrefixProxyEditor,
@@ -116,8 +118,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const fileNameTitle = noteValue
     ? `${file.name}\n${t('auth_files.note_display')}: ${noteValue}`
     : file.name;
-  const usedTokensTitle = `${t('auth_files.tokens_used')}: ${fileStats.totalTokens.toLocaleString()}`;
-  const usedTokensCompact = formatCompactNumber(fileStats.totalTokens);
+  const usedTokensTitle = `${t('auth_files.tokens_used')}: ${usedTokens.toLocaleString()}`;
+  const usedTokensCompact = formatCompactNumber(usedTokens);
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual') || '虚拟认证文件'
     : file.disabled

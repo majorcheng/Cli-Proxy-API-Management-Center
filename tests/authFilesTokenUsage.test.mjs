@@ -27,8 +27,38 @@ const usageTranspiled = ts.transpileModule(usageSourceCode, {
 const usageModuleUrl = `data:text/javascript;base64,${Buffer.from(usageTranspiled.outputText).toString('base64')}`;
 const { computeKeyStatsFromDetails } = await import(usageModuleUrl);
 
+const codexWeeklyLimitSourcePath = new URL('../src/features/authFiles/codexWeeklyLimit.ts', import.meta.url);
+const codexWeeklyLimitSourceCode = await readFile(codexWeeklyLimitSourcePath, 'utf8');
+const codexWeeklyLimitTranspiled = ts.transpileModule(codexWeeklyLimitSourceCode, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2020,
+  },
+});
+const codexWeeklyLimitModuleUrl = `data:text/javascript;base64,${Buffer.from(codexWeeklyLimitTranspiled.outputText).toString('base64')}`;
+
+const tokenUsageSourcePath = new URL('../src/features/authFiles/tokenUsage.ts', import.meta.url);
+const tokenUsageSourceCode = (await readFile(tokenUsageSourcePath, 'utf8'))
+  .replace(/from ['"]@\/utils\/usage['"]/g, `from '${usageModuleUrl}'`)
+  .replace(
+    /from ['"]@\/features\/authFiles\/codexWeeklyLimit['"]/g,
+    `from '${codexWeeklyLimitModuleUrl}'`,
+  );
+const tokenUsageTranspiled = ts.transpileModule(tokenUsageSourceCode, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2020,
+  },
+});
+const tokenUsageModuleUrl = `data:text/javascript;base64,${Buffer.from(tokenUsageTranspiled.outputText).toString('base64')}`;
+const { buildAuthFileUsedTokensMap } = await import(tokenUsageModuleUrl);
+
 const cardSource = await readFile(
   new URL('../src/features/authFiles/components/AuthFileCard.tsx', import.meta.url),
+  'utf8',
+);
+const pageSource = await readFile(
+  new URL('../src/pages/AuthFilesPage.tsx', import.meta.url),
   'utf8',
 );
 const zhSource = await readFile(
@@ -95,9 +125,93 @@ test('认证文件统计会按 auth_index/source 聚合累计 totalTokens', () =
   });
 });
 
+test('认证文件已用量会限制在最近 7 天，且 Codex 429 周限时改看上一整个周限周期', () => {
+  const nowMs = Date.parse('2026-04-08T12:00:00+08:00');
+  const usedTokensMap = buildAuthFileUsedTokensMap(
+    [
+      {
+        name: 'codex-a.json',
+        provider: 'codex',
+        auth_index: 'codex-a',
+        next_retry_after: '2026-04-10T00:00:00+08:00',
+        updated_at: '2026-04-08T11:00:00+08:00',
+        status_message:
+          '{"error":{"type":"usage_limit_reached","resets_at":1775750400,"resets_in_seconds":129600}}',
+      },
+      {
+        name: 'claude-a.json',
+        provider: 'claude',
+        auth_index: 'claude-a',
+        status_message: 'ok',
+      },
+    ],
+    [
+      {
+        timestamp: '2026-04-04T10:00:00+08:00',
+        source: 't:codex-a.json',
+        auth_index: 'codex-a',
+        failed: false,
+        tokens: {
+          input_tokens: 300,
+          output_tokens: 200,
+          reasoning_tokens: 0,
+          cached_tokens: 0,
+          total_tokens: 500,
+        },
+      },
+      {
+        timestamp: '2026-04-10T10:00:00+08:00',
+        source: 't:codex-a.json',
+        auth_index: 'codex-a',
+        failed: true,
+        tokens: {
+          input_tokens: 10,
+          output_tokens: 10,
+          reasoning_tokens: 0,
+          cached_tokens: 0,
+          total_tokens: 20,
+        },
+      },
+      {
+        timestamp: '2026-03-31T11:59:00+08:00',
+        source: 't:claude-a.json',
+        auth_index: 'claude-a',
+        failed: false,
+        tokens: {
+          input_tokens: 50,
+          output_tokens: 20,
+          reasoning_tokens: 0,
+          cached_tokens: 0,
+          total_tokens: 70,
+        },
+      },
+      {
+        timestamp: '2026-04-07T13:00:00+08:00',
+        source: 't:claude-a.json',
+        auth_index: 'claude-a',
+        failed: false,
+        tokens: {
+          input_tokens: 80,
+          output_tokens: 40,
+          reasoning_tokens: 0,
+          cached_tokens: 0,
+          total_tokens: 120,
+        },
+      },
+    ],
+    nowMs,
+  );
+
+  assert.equal(usedTokensMap.get('codex-a.json'), 500);
+  assert.equal(usedTokensMap.get('claude-a.json'), 120);
+});
+
 test('认证文件卡牌展示已用统计，并复用紧凑数值格式化', () => {
   assert.match(cardSource, /t\('auth_files\.tokens_used'\)/);
-  assert.match(cardSource, /formatCompactNumber\(fileStats\.totalTokens\)/);
+  assert.match(cardSource, /usedTokens: number;/);
+  assert.match(cardSource, /formatCompactNumber\(usedTokens\)/);
   assert.match(cardSource, /styles\.statTokens/);
+  assert.match(pageSource, /buildAuthFileUsedTokensMap\(files,\s*usageDetails\)/);
+  assert.match(pageSource, /usedTokens=\{authFileUsedTokens\.get\(file\.name\) \?\? 0\}/);
   assert.match(zhSource, /"tokens_used"\s*:\s*"已用"/);
 });

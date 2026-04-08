@@ -9,6 +9,12 @@ export type CodexWeeklyLimitView = {
   countdownLabel: string;
 };
 
+export type AuthFileUsedTokensWindow = {
+  startMs: number;
+  endMs: number;
+  kind: 'rolling_7d' | 'codex_previous_weekly_cycle';
+};
+
 type AuthFileLike = {
   provider?: unknown;
   type?: unknown;
@@ -32,6 +38,8 @@ const EMPTY_RESULT: CodexWeeklyLimitView = {
   progressPercent: 0,
   countdownLabel: '未命中',
 };
+
+const WEEK_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -89,6 +97,9 @@ const parseUnixSecondsLike = (value: unknown): number | null => {
 
 const resolveProviderKey = (file: AuthFileLike): string =>
   normalizeString(file.provider || file.type).toLowerCase();
+
+const resolveFileUpdatedAtMs = (file: AuthFileLike): number | null =>
+  parseDateLike(file.updated_at ?? file.updatedAt) ?? parseDateLike(file.modified);
 
 export function formatCompactDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return 'lt1m';
@@ -181,5 +192,36 @@ export function resolveCodexWeeklyLimit(file: AuthFileLike, nowMs: number = Date
     recoveryAtIso: new Date(recoveryAtMs).toISOString(),
     progressPercent,
     countdownLabel: formatCompactDuration(recoveryAtMs - nowMs),
+  };
+}
+
+export function resolveAuthFileUsedTokensWindow(
+  file: AuthFileLike,
+  nowMs: number = Date.now()
+): AuthFileUsedTokensWindow {
+  const rollingWindow: AuthFileUsedTokensWindow = {
+    startMs: Math.max(0, nowMs - WEEK_WINDOW_MS),
+    endMs: nowMs,
+    kind: 'rolling_7d',
+  };
+
+  if (resolveProviderKey(file) !== 'codex') {
+    return rollingWindow;
+  }
+
+  const weeklyLimit = resolveCodexWeeklyLimit(file, nowMs);
+  if (!weeklyLimit.is429Limited) {
+    return rollingWindow;
+  }
+
+  // Codex 命中 429 周限时，“已用”要看上一整个周限周期，而不是继续累计到当前时间。
+  // 有 recoveryAt 时按 recoveryAt 往前回溯 7 天；否则退回到文件最近一次状态更新时间。
+  const cycleEndMs =
+    parseDateLike(weeklyLimit.recoveryAtIso) ?? resolveFileUpdatedAtMs(file) ?? nowMs;
+
+  return {
+    startMs: Math.max(0, cycleEndMs - WEEK_WINDOW_MS),
+    endMs: cycleEndMs,
+    kind: 'codex_previous_weekly_cycle',
   };
 }

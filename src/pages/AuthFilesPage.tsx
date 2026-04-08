@@ -41,6 +41,7 @@ import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileMod
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
+import { buildAuthFileUsedTokensMap } from '@/features/authFiles/tokenUsage';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
@@ -121,6 +122,10 @@ export function AuthFilesPage() {
   } = useAuthFilesData({ refreshKeyStats });
 
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
+  const authFileUsedTokens = useMemo(
+    () => buildAuthFileUsedTokensMap(files, usageDetails),
+    [files, usageDetails]
+  );
 
   const {
     excluded,
@@ -783,6 +788,7 @@ export function AuthFilesPage() {
                     resolvedTheme={resolvedTheme}
                     disableControls={disableControls}
                     keyStats={keyStats}
+                    usedTokens={authFileUsedTokens.get(file.name) ?? 0}
                     statusBarCache={statusBarCache}
                     onShowModels={showModels}
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}
