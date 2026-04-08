@@ -11,6 +11,7 @@ import {
 import type {
   GeminiKeyConfig,
   OpenAIProviderConfig,
+  OpenAIProvidersState,
   ProviderKeyConfig,
   ApiKeyEntry,
   ModelAlias
@@ -26,6 +27,18 @@ const extractArrayPayload = (data: unknown, key: string): unknown[] => {
   if (!isRecord(data)) return [];
   const candidate = data[key] ?? data.items ?? data.data ?? data;
   return Array.isArray(candidate) ? candidate : [];
+};
+
+const extractOpenAIProvidersState = (data: unknown): OpenAIProvidersState => {
+  const list = extractArrayPayload(data, 'openai-compatibility');
+  const items = list.map((item) => normalizeOpenAIProvider(item)).filter(Boolean) as OpenAIProviderConfig[];
+  const revision =
+    isRecord(data) && typeof data.revision === 'string'
+      ? data.revision
+      : isRecord(data) && typeof data['config-revision'] === 'string'
+        ? String(data['config-revision'])
+        : '';
+  return { items, revision };
 };
 
 const serializeModelAliases = (models?: ModelAlias[]) =>
@@ -209,9 +222,13 @@ export const providersApi = {
     apiClient.delete(`/vertex-api-key?api-key=${encodeURIComponent(apiKey)}`),
 
   async getOpenAIProviders(): Promise<OpenAIProviderConfig[]> {
+    const state = await providersApi.getOpenAIProvidersState();
+    return state.items;
+  },
+
+  async getOpenAIProvidersState(): Promise<OpenAIProvidersState> {
     const data = await apiClient.get('/openai-compatibility');
-    const list = extractArrayPayload(data, 'openai-compatibility');
-    return list.map((item) => normalizeOpenAIProvider(item)).filter(Boolean) as OpenAIProviderConfig[];
+    return extractOpenAIProvidersState(data);
   },
 
   saveOpenAIProviders: (providers: OpenAIProviderConfig[]) =>
@@ -220,15 +237,48 @@ export const providersApi = {
   updateOpenAIProvider: (index: number, value: OpenAIProviderConfig) =>
     apiClient.patch('/openai-compatibility', { index, value: serializeOpenAIProvider(value) }),
 
-  deleteOpenAIProvider: (name: string) =>
-    apiClient.delete(`/openai-compatibility?name=${encodeURIComponent(name)}`),
+  async createOpenAIProvider(
+    value: OpenAIProviderConfig,
+    revision: string
+  ): Promise<OpenAIProvidersState> {
+    const data = await apiClient.post('/openai-compatibility', {
+      revision,
+      value: serializeOpenAIProvider(value),
+    });
+    return extractOpenAIProvidersState(data);
+  },
 
-  // 通过 name 更新 OpenAI 兼容提供商（用于禁用模型）
-  patchOpenAIProviderByName: (name: string, value: Partial<OpenAIProviderConfig>) => {
-    const payload: Record<string, any> = {};
+  async patchOpenAIProviderByName(
+    matchName: string,
+    value: Partial<OpenAIProviderConfig>,
+    revision: string
+  ): Promise<OpenAIProvidersState> {
+    const payload: Record<string, unknown> = {};
+    if (value.name !== undefined) payload.name = value.name;
+    if (value.priority !== undefined) payload.priority = value.priority;
+    if (value.prefix !== undefined) payload.prefix = value.prefix?.trim() || '';
+    if (value.baseUrl !== undefined) payload['base-url'] = value.baseUrl;
+    if (value.apiKeyEntries !== undefined) {
+      payload['api-key-entries'] = value.apiKeyEntries.map((entry) => serializeApiKeyEntry(entry));
+    }
     if (value.models !== undefined) {
       payload.models = serializeModelAliases(value.models);
     }
-    return apiClient.patch('/openai-compatibility', { name, value: payload });
+    if (value.headers !== undefined) {
+      payload.headers = serializeHeaders(value.headers) ?? {};
+    }
+    const data = await apiClient.patch('/openai-compatibility', {
+      revision,
+      matchName,
+      value: payload,
+    });
+    return extractOpenAIProvidersState(data);
+  },
+
+  async deleteOpenAIProvider(name: string, revision: string): Promise<OpenAIProvidersState> {
+    const data = await apiClient.delete('/openai-compatibility', {
+      data: { name, revision },
+    });
+    return extractOpenAIProvidersState(data);
   },
 };

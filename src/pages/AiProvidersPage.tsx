@@ -53,6 +53,7 @@ export function AiProvidersPage() {
   const [openaiProviders, setOpenaiProviders] = useState<OpenAIProviderConfig[]>(
     () => config?.openaiCompatibility || []
   );
+  const [openaiRevision, setOpenaiRevision] = useState('');
 
   const [configSwitchingKey, setConfigSwitchingKey] = useState<string | null>(null);
 
@@ -90,6 +91,15 @@ export function AiProvidersPage() {
       setClaudeConfigs(data?.claudeApiKeys || []);
       setVertexConfigs(data?.vertexApiKeys || []);
       setOpenaiProviders(data?.openaiCompatibility || []);
+
+      try {
+        const openaiState = await providersApi.getOpenAIProvidersState();
+        setOpenaiProviders(openaiState.items);
+        setOpenaiRevision(openaiState.revision);
+        updateConfigValue('openai-compatibility', openaiState.items);
+      } catch {
+        // OpenAI provider state refresh is best-effort here; keep the full-config snapshot on failure.
+      }
 
       if (vertexResult.status === 'fulfilled') {
         setVertexConfigs(vertexResult.value || []);
@@ -338,14 +348,28 @@ export function AiProvidersPage() {
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await providersApi.deleteOpenAIProvider(entry.name);
-          const next = openaiProviders.filter((_, idx) => idx !== index);
-          setOpenaiProviders(next);
-          updateConfigValue('openai-compatibility', next);
-          clearCache('openai-compatibility');
+          const state = await providersApi.deleteOpenAIProvider(entry.name, openaiRevision);
+          setOpenaiProviders(state.items);
+          setOpenaiRevision(state.revision);
+          updateConfigValue('openai-compatibility', state.items);
           showNotification(t('notification.openai_provider_deleted'), 'success');
         } catch (err: unknown) {
           const message = getErrorMessage(err);
+          if (
+            typeof err === 'object' &&
+            err !== null &&
+            'status' in err &&
+            Number((err as { status?: number }).status) === 409
+          ) {
+            try {
+              const latest = await providersApi.getOpenAIProvidersState();
+              setOpenaiProviders(latest.items);
+              setOpenaiRevision(latest.revision);
+              updateConfigValue('openai-compatibility', latest.items);
+            } catch {
+              // 冲突后刷新失败时保持当前列表，继续展示原始错误
+            }
+          }
           showNotification(`${t('notification.delete_failed')}: ${message}`, 'error');
         }
       },

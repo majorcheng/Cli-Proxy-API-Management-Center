@@ -63,6 +63,14 @@ const getErrorMessage = (err: unknown) => {
   return '';
 };
 
+const getErrorStatus = (err: unknown) =>
+  typeof err === 'object' &&
+  err !== null &&
+  'status' in err &&
+  typeof (err as { status?: unknown }).status === 'number'
+    ? Number((err as { status: number }).status)
+    : undefined;
+
 const normalizeModelEntries = (entries: ModelEntry[]) =>
   (entries ?? []).reduce<Array<{ name: string; alias: string }>>((acc, entry) => {
     const name = String(entry?.name ?? '').trim();
@@ -131,15 +139,13 @@ export function AiProvidersOpenAIEditLayout() {
   const disableControls = connectionStatus !== 'connected';
 
   const config = useConfigStore((state) => state.config);
-  const fetchConfig = useConfigStore((state) => state.fetchConfig);
-  const isCacheValid = useConfigStore((state) => state.isCacheValid);
+  const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
 
   const [providers, setProviders] = useState<OpenAIProviderConfig[]>(
     () => config?.openaiCompatibility ?? []
   );
-  const [loading, setLoading] = useState(
-    () => !isCacheValid('openai-compatibility')
-  );
+  const [revision, setRevision] = useState('');
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const draftKey = useMemo(() => {
@@ -235,18 +241,19 @@ export function AiProvidersOpenAIEditLayout() {
     navigate('/ai-providers', { replace: true });
   }, [location.state, navigate]);
 
+  const refreshOpenAIProviders = useCallback(async () => {
+    const state = await providersApi.getOpenAIProvidersState();
+    setProviders(state.items);
+    setRevision(state.revision);
+    updateConfigValue('openai-compatibility', state.items);
+    return state;
+  }, [updateConfigValue]);
+
   useEffect(() => {
     let cancelled = false;
-    const hasValidCache = isCacheValid('openai-compatibility');
-    if (!hasValidCache) {
-      setLoading(true);
-    }
+    setLoading(true);
 
-    fetchConfig('openai-compatibility')
-      .then((value) => {
-        if (cancelled) return;
-        setProviders(Array.isArray(value) ? (value as OpenAIProviderConfig[]) : []);
-      })
+    refreshOpenAIProviders()
       .catch((err: unknown) => {
         if (cancelled) return;
         const message = getErrorMessage(err) || t('notification.refresh_failed');
@@ -260,7 +267,7 @@ export function AiProvidersOpenAIEditLayout() {
     return () => {
       cancelled = true;
     };
-  }, [fetchConfig, isCacheValid, showNotification, t]);
+  }, [refreshOpenAIProviders, showNotification, t]);
 
   useEffect(() => {
     if (loading) return;
@@ -419,25 +426,14 @@ export function AiProvidersOpenAIEditLayout() {
       if (resolvedTestModel) payload.testModel = resolvedTestModel;
       const models = entriesToModels(form.modelEntries);
       if (models.length) payload.models = models;
+      const state =
+        editIndex !== null && initialData
+          ? await providersApi.patchOpenAIProviderByName(initialData.name, payload, revision)
+          : await providersApi.createOpenAIProvider(payload, revision);
 
-      const nextList =
-        editIndex !== null
-          ? providers.map((item, idx) => (idx === editIndex ? payload : item))
-          : [...providers, payload];
-
-      await providersApi.saveOpenAIProviders(nextList);
-
-      let syncedProviders = nextList;
-      try {
-        const latest = await fetchConfig('openai-compatibility', true);
-        if (Array.isArray(latest)) {
-          syncedProviders = latest as OpenAIProviderConfig[];
-        }
-      } catch {
-        // 保存成功后刷新失败时，回退到本地计算结果，避免页面数据为空或回退
-      }
-
-      setProviders(syncedProviders);
+      setProviders(state.items);
+      setRevision(state.revision);
+      updateConfigValue('openai-compatibility', state.items);
       showNotification(
         editIndex !== null
           ? t('notification.openai_provider_updated')
@@ -448,6 +444,15 @@ export function AiProvidersOpenAIEditLayout() {
       setDraftBaselineSignature(draftKey, buildOpenAISignature(form, testModel));
       handleBack();
     } catch (err: unknown) {
+      if (getErrorStatus(err) === 409) {
+        try {
+          const latest = await refreshOpenAIProviders();
+          setProviders(latest.items);
+          setRevision(latest.revision);
+        } catch {
+          // 冲突后刷新失败时保留当前表单，提示原始错误即可
+        }
+      }
       showNotification(`${t('notification.update_failed')}: ${getErrorMessage(err)}`, 'error');
     } finally {
       setSaving(false);
@@ -456,14 +461,16 @@ export function AiProvidersOpenAIEditLayout() {
     allowNextNavigation,
     draftKey,
     editIndex,
-    fetchConfig,
     form,
     handleBack,
-    providers,
+    initialData,
+    refreshOpenAIProviders,
+    revision,
     setDraftBaselineSignature,
     showNotification,
     t,
     testModel,
+    updateConfigValue,
   ]);
 
   return (

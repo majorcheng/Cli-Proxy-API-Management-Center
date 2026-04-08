@@ -57,3 +57,8 @@ export interface OpenAIProviderConfig {
   testModel?: string;
   [key: string]: unknown;
 }
+
+export interface OpenAIProvidersState {
+  items: OpenAIProviderConfig[];
+  revision: string;
+}

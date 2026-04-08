@@ -63,8 +63,8 @@ export function useDisableModel(options: UseDisableModelOptions): UseDisableMode
         throw new Error(t('monitor.logs.disable_error_no_provider'));
       }
 
-      const providers = await providersApi.getOpenAIProviders();
-      const targetProvider = providers.find(
+      const state = await providersApi.getOpenAIProvidersState();
+      const targetProvider = state.items.find(
         (p) => p.name && p.name.toLowerCase() === providerName.toLowerCase()
       );
 
@@ -80,7 +80,7 @@ export function useDisableModel(options: UseDisableModelOptions): UseDisableMode
       if (filteredModels.length < originalModels.length) {
         await providersApi.patchOpenAIProviderByName(targetProvider.name, {
           models: filteredModels,
-        } as Partial<OpenAIProviderConfig>);
+        } as Partial<OpenAIProviderConfig>, state.revision);
       }
 
       addDisabledModel(source, model);
