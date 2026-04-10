@@ -64,6 +64,7 @@ export interface UsageDetail {
   source: string;
   auth_index: string;
   client_ip?: string;
+  reasoning_effort?: string;
   latency_ms?: number;
   tokens: {
     input_tokens: number;

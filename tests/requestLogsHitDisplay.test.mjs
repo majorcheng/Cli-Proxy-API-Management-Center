@@ -31,7 +31,7 @@ test('请求日志中英文文案包含命中百分比列表头', () => {
 });
 
 test('请求日志表格为命中列同步扩展固定列宽，避免右侧留白', () => {
-  assert.match(monitorPageStyles, /\.virtualTable\s*\{[\s\S]*min-width:\s*1450px;/);
-  assert.match(monitorPageStyles, /th:nth-child\(12\), td:nth-child\(12\)\s*\{\s*width:\s*130px;\s*\}/);
-  assert.match(monitorPageStyles, /th:nth-child\(15\), td:nth-child\(15\)\s*\{\s*width:\s*150px;\s*\}/);
+  assert.match(monitorPageStyles, /\.virtualTable\s*\{[\s\S]*min-width:\s*1600px;/);
+  assert.match(monitorPageStyles, /th:nth-child\(13\), td:nth-child\(13\)\s*\{\s*width:\s*130px;\s*\}/);
+  assert.match(monitorPageStyles, /th:nth-child\(16\), td:nth-child\(16\)\s*\{\s*width:\s*150px;\s*\}/);
 });

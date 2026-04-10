@@ -37,11 +37,12 @@ export interface ModelPrice {
 }
 
 export interface UsageDetail {
-  timestamp: string;
-  source: string;
-  auth_index: number;
-  client_ip?: string;
-  tokens: {
+	timestamp: string;
+	source: string;
+	auth_index: number;
+	client_ip?: string;
+	reasoning_effort?: string;
+	tokens: {
     input_tokens: number;
     output_tokens: number;
     reasoning_tokens: number;

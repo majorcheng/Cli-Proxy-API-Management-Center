@@ -1645,6 +1645,7 @@
       "header_api": "API",
       "header_request_type": "Type",
       "header_model": "Model",
+      "header_reasoning_effort": "Effort",
       "header_source": "Source",
       "header_status": "Status",
       "header_recent": "Recent Status",

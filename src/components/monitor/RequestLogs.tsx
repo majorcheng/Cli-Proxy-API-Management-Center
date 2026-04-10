@@ -37,6 +37,7 @@ interface LogEntry {
   latencyMs: number | null;
   apiKey: string;
   model: string;
+  reasoningEffort: string;
   source: string;
   displayName: string;
   providerName: string | null;
@@ -238,6 +239,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           const displayName = resolvedName ? `${resolvedName} (${masked})` : masked;
           const inputTokens = detail.tokens.input_tokens || 0;
           const hitTokens = extractMonitorHitTokens(detail.tokens);
+          const reasoningEffort = detail.reasoning_effort?.trim() || '';
           entries.push({
             id: `${idCounter++}`,
             timestamp: detail.timestamp,
@@ -245,6 +247,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             latencyMs: typeof detail.latency_ms === 'number' ? detail.latency_ms : null,
             apiKey,
             model: modelName,
+            reasoningEffort,
             source,
             displayName,
             providerName: resolvedName,
@@ -372,6 +375,10 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return `${formatNumber(hitTokens)} (${(hitRate * 100).toFixed(1)}%)`;
   };
 
+  const formatReasoningEffortDisplay = (reasoningEffort: string) => {
+    return reasoningEffort || '-';
+  };
+
   // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求
   const formatLatency = (latencyMs: number | null) => {
     if (latencyMs === null || Number.isNaN(latencyMs)) {
@@ -404,6 +411,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
       <>
         <td title={entry.model}>
           {entry.model}
+        </td>
+        <td title={formatReasoningEffortDisplay(entry.reasoningEffort)}>
+          {formatReasoningEffortDisplay(entry.reasoningEffort)}
         </td>
         <td>
           <span className={`${styles.statusPill} ${entry.failed ? styles.failed : styles.success}`}>
@@ -551,6 +561,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
               <thead>
                 <tr>
                   <th>{t('monitor.logs.header_model')}</th>
+                  <th>{t('monitor.logs.header_reasoning_effort')}</th>
                   <th>{t('monitor.logs.header_status')}</th>
                   <th>{t('monitor.logs.header_latency')}</th>
                   <th>{t('monitor.logs.header_recent')}</th>
