@@ -5,7 +5,7 @@ import { usageApi, authFilesApi } from '@/services/api';
 import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
 import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
 import { extractMonitorHitTokens, calculateMonitorHitRate } from '@/utils/monitorTokenStats';
-import { resolveSourceDisplay } from '@/utils/sourceResolver';
+import { normalizeOpenAIProviderBaseUrl, resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import {
   maskSecret,
@@ -42,6 +42,7 @@ interface LogEntry {
   displayName: string;
   providerName: string | null;
   providerType: string;
+  providerBaseUrl: string;
   maskedKey: string;
   failed: boolean;
   inputTokens: number;
@@ -237,6 +238,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             ? sourceInfo.displayName
             : null;
           const displayName = resolvedName ? `${resolvedName} (${masked})` : masked;
+          const providerBaseUrl = normalizeOpenAIProviderBaseUrl(sourceInfo.baseUrl);
           const inputTokens = detail.tokens.input_tokens || 0;
           const hitTokens = extractMonitorHitTokens(detail.tokens);
           const reasoningEffort = detail.reasoning_effort?.trim() || '';
@@ -252,6 +254,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             displayName,
             providerName: resolvedName,
             providerType,
+            providerBaseUrl,
             maskedKey: masked,
             failed: detail.failed,
             inputTokens,
@@ -406,6 +409,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     const stats = getStats(entry);
     const rateValue = parseFloat(stats.successRate);
     const requestIpDisplay = entry.clientIp || '-';
+    const channelTitle = entry.providerBaseUrl || entry.source;
 
     return (
       <>
@@ -440,12 +444,32 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           {maskSecret(entry.apiKey)}
         </td>
         <td>{entry.providerType}</td>
-        <td title={entry.source}>
+        <td title={channelTitle}>
           {entry.providerName ? (
             <>
-              <span className={styles.channelName}>{entry.providerName}</span>
+              {entry.providerBaseUrl ? (
+                <a
+                  href={entry.providerBaseUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`${styles.channelName} ${styles.channelLink}`}
+                >
+                  {entry.providerName}
+                </a>
+              ) : (
+                <span className={styles.channelName}>{entry.providerName}</span>
+              )}
               <span className={styles.channelSecret}> ({entry.maskedKey})</span>
             </>
+          ) : entry.providerBaseUrl ? (
+            <a
+              href={entry.providerBaseUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.channelLink}
+            >
+              {entry.maskedKey}
+            </a>
           ) : (
             entry.maskedKey
           )}

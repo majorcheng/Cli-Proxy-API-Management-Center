@@ -968,6 +968,15 @@
   display: inline;
 }
 
+.channelLink {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .channelSecret {
   color: var(--text-tertiary);
   font-size: 0.9em;

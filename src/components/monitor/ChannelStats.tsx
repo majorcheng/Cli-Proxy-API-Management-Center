@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { useDisableModel } from '@/hooks';
 import { normalizeUsageSourceId } from '@/utils/usage';
-import { resolveSourceDisplay } from '@/utils/sourceResolver';
+import { normalizeOpenAIProviderBaseUrl, resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import { TimeRangeSelector, formatTimeRangeCaption, type TimeRange } from './TimeRangeSelector';
 import { DisableModelModal } from './DisableModelModal';
@@ -40,6 +40,7 @@ interface ChannelStat {
   displayName: string;
   providerName: string | null;
   providerType: string;
+  providerBaseUrl: string;
   maskedKey: string;
   totalRequests: number;
   successRequests: number;
@@ -114,6 +115,7 @@ export function ChannelStats({ data, loading, providerMap, providerModels, sourc
             : provider;
           // 只统计能解析出名称的渠道
           if (!resolvedName) return;
+          const providerBaseUrl = normalizeOpenAIProviderBaseUrl(sourceInfo.baseUrl);
 
           const displayName = provider
             ? `${provider} (${masked})`
@@ -126,6 +128,7 @@ export function ChannelStats({ data, loading, providerMap, providerModels, sourc
               displayName,
               providerName: provider || resolvedName,
               providerType: sourceInfo.type || '',
+              providerBaseUrl,
               maskedKey: masked,
               totalRequests: 0,
               successRequests: 0,
@@ -318,9 +321,31 @@ export function ChannelStats({ data, loading, providerMap, providerModels, sourc
                       <td>
                         {stat.providerName ? (
                           <>
-                            <span className={styles.channelName}>{stat.providerName}</span>
+                            {stat.providerBaseUrl ? (
+                              <a
+                                href={stat.providerBaseUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`${styles.channelName} ${styles.channelLink}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {stat.providerName}
+                              </a>
+                            ) : (
+                              <span className={styles.channelName}>{stat.providerName}</span>
+                            )}
                             <span className={styles.channelSecret}> ({stat.maskedKey})</span>
                           </>
+                        ) : stat.providerBaseUrl ? (
+                          <a
+                            href={stat.providerBaseUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.channelLink}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {stat.maskedKey}
+                          </a>
                         ) : (
                           stat.maskedKey
                         )}

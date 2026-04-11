@@ -10,16 +10,37 @@ export interface SourceInfoMapInput {
   openaiCompatibility?: OpenAIProviderConfig[];
 }
 
+/**
+ * 监控中心里点击 OpenAI 兼容渠道时，优先打开服务根地址，
+ * 避免把用户带到 /v1 或具体接口路径上。
+ */
+export function normalizeOpenAIProviderBaseUrl(baseUrl: string | undefined): string {
+  let normalized = String(baseUrl || '').trim();
+  if (!normalized) return '';
+
+  normalized = normalized.replace(/\/?v0\/management\/?$/i, '');
+  normalized = normalized.replace(/\/chat\/completions\/?$/i, '');
+  normalized = normalized.replace(/\/models\/?$/i, '');
+  normalized = normalized.replace(/\/v1\/?$/i, '');
+  normalized = normalized.replace(/\/+$/g, '');
+
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `http://${normalized}`;
+  }
+
+  return normalized;
+}
+
 export function buildSourceInfoMap(input: SourceInfoMapInput): Map<string, SourceInfo> {
   const map = new Map<string, SourceInfo>();
 
-  const registerSource = (sourceId: string, displayName: string, type: string) => {
+  const registerSource = (sourceId: string, displayName: string, type: string, baseUrl?: string) => {
     if (!sourceId || !displayName || map.has(sourceId)) return;
-    map.set(sourceId, { displayName, type });
+    map.set(sourceId, { displayName, type, baseUrl });
   };
 
-  const registerCandidates = (displayName: string, type: string, candidates: string[]) => {
-    candidates.forEach((sourceId) => registerSource(sourceId, displayName, type));
+  const registerCandidates = (displayName: string, type: string, candidates: string[], baseUrl?: string) => {
+    candidates.forEach((sourceId) => registerSource(sourceId, displayName, type, baseUrl));
   };
 
   const providers: Array<{
@@ -49,10 +70,11 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): Map<string, Sourc
     const displayName = provider.prefix?.trim() || provider.name || `OpenAI #${providerIndex + 1}`;
     const candidates = new Set<string>();
     buildCandidateUsageSourceIds({ prefix: provider.prefix }).forEach((id) => candidates.add(id));
+    buildCandidateUsageSourceIds({ prefix: provider.name }).forEach((id) => candidates.add(id));
     (provider.apiKeyEntries || []).forEach((entry) => {
       buildCandidateUsageSourceIds({ apiKey: entry.apiKey }).forEach((id) => candidates.add(id));
     });
-    registerCandidates(displayName, 'openai', Array.from(candidates));
+    registerCandidates(displayName, 'openai', Array.from(candidates), provider.baseUrl);
   });
 
   return map;
