@@ -1,20 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
-import {
-  IconInfo,
-  IconModelCluster,
-  IconRefreshCw,
-  IconSettings,
-} from '@/components/ui/icons';
+import { IconInfo, IconModelCluster, IconRefreshCw, IconSettings } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import type { AuthFileItem } from '@/types';
 import { resolveAuthProvider } from '@/utils/quota';
 import {
   calculateStatusBarData,
+  formatUsd,
   formatCompactNumber,
   normalizeAuthIndex,
-  type KeyStats
+  type KeyStats,
 } from '@/utils/usage';
 import { formatFileSize } from '@/utils/format';
 import {
@@ -38,6 +34,12 @@ import styles from '@/pages/AuthFilesPage.module.scss';
 
 const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'available']);
 
+type AuthFileUsageCost = {
+  totalCost: number;
+  unpricedRequestCount: number;
+  unpricedModels: string[];
+};
+
 export type AuthFileCardProps = {
   file: AuthFileItem;
   selected: boolean;
@@ -45,6 +47,7 @@ export type AuthFileCardProps = {
   disableControls: boolean;
   keyStats: KeyStats;
   usedTokens: number;
+  usageCost: AuthFileUsageCost | null;
   statusBarCache: Map<string, AuthFileStatusBarData>;
   onShowModels: (file: AuthFileItem) => void;
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
@@ -68,6 +71,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     disableControls,
     keyStats,
     usedTokens,
+    usageCost,
     statusBarCache,
     onShowModels,
     onOpenPrefixProxyEditor,
@@ -120,6 +124,16 @@ export function AuthFileCard(props: AuthFileCardProps) {
     : file.name;
   const usedTokensTitle = `${t('auth_files.tokens_used')}: ${usedTokens.toLocaleString()}`;
   const usedTokensCompact = formatCompactNumber(usedTokens);
+  const usedCostLabel = usageCost ? formatUsd(usageCost.totalCost) : '--';
+  const usedCostTitleLines = [`${t('auth_files.cost_used')}: ${usedCostLabel}`];
+  if (usageCost?.unpricedRequestCount) {
+    usedCostTitleLines.push(t('auth_files.cost_partial_notice'));
+    if (usageCost.unpricedModels.length > 0) {
+      usedCostTitleLines.push(usageCost.unpricedModels.join(', '));
+    }
+  }
+  const usedCostTitle = usedCostTitleLines.join('\n');
+  const usedCostCompact = `${usedCostLabel}${usageCost?.unpricedRequestCount ? '*' : ''}`;
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual') || '虚拟认证文件'
     : file.disabled
@@ -160,7 +174,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   aria-label={
                     selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')
                   }
-                  title={selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')}
+                  title={
+                    selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')
+                  }
                 />
               )}
               <div
@@ -218,11 +234,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 {file.name}
               </span>
               <div className={styles.inlineStats}>
-                <div className={`${styles.statPill} ${styles.statPillInline} ${styles.statSuccess}`}>
+                <div
+                  className={`${styles.statPill} ${styles.statPillInline} ${styles.statSuccess}`}
+                >
                   <span className={styles.statLabel}>{t('stats.success')}</span>
                   <span className={styles.statValue}>{fileStats.success}</span>
                 </div>
-                <div className={`${styles.statPill} ${styles.statPillInline} ${styles.statFailure}`}>
+                <div
+                  className={`${styles.statPill} ${styles.statPillInline} ${styles.statFailure}`}
+                >
                   <span className={styles.statLabel}>{t('stats.failure')}</span>
                   <span className={styles.statValue}>{fileStats.failure}</span>
                 </div>
@@ -232,6 +252,13 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 >
                   <span className={styles.statLabel}>{t('auth_files.tokens_used')}</span>
                   <span className={styles.statValue}>{usedTokensCompact}</span>
+                </div>
+                <div
+                  className={`${styles.statPill} ${styles.statPillInline} ${styles.statCost}`}
+                  title={usedCostTitle}
+                >
+                  <span className={styles.statLabel}>{t('auth_files.cost_used')}</span>
+                  <span className={styles.statValue}>{usedCostCompact}</span>
                 </div>
               </div>
             </div>
@@ -290,7 +317,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
                         loading={codexRefreshing}
                       >
                         {!codexRefreshing && (
-                          <IconRefreshCw className={`${styles.actionIcon} ${styles.cardRefreshIcon}`} size={16} />
+                          <IconRefreshCw
+                            className={`${styles.actionIcon} ${styles.cardRefreshIcon}`}
+                            size={16}
+                          />
                         )}
                       </Button>
                     )}

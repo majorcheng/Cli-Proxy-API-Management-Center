@@ -105,7 +105,6 @@
   }
 }
 
-
 .filterAllIconWrap {
   position: relative;
   border-color: color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
@@ -123,7 +122,6 @@
   display: block;
   color: color-mix(in srgb, var(--primary-color) 70%, var(--text-primary));
 }
-
 
 .filterContent {
   display: flex;
@@ -960,8 +958,7 @@
   overflow: hidden;
   background:
     radial-gradient(circle at 100% 0, var(--auth-card-glow) 0%, transparent 38%),
-    linear-gradient(180deg, var(--auth-card-tint) 0%, transparent 58%),
-    var(--auth-card-surface);
+    linear-gradient(180deg, var(--auth-card-tint) 0%, transparent 58%), var(--auth-card-surface);
   border: 1px solid var(--auth-card-border);
   border-radius: 16px;
   padding: 18px;
@@ -1605,6 +1602,12 @@
   background: color-mix(in srgb, var(--primary-color) 14%, var(--bg-secondary));
   color: var(--text-primary);
   border-color: color-mix(in srgb, var(--primary-color) 32%, var(--border-color));
+}
+
+.statCost {
+  background: color-mix(in srgb, #f59e0b 14%, var(--bg-secondary));
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, #f59e0b 36%, var(--border-color));
 }
 
 .statusPanel {

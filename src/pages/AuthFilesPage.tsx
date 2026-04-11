@@ -41,7 +41,7 @@ import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileMod
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
-import { buildAuthFileUsedTokensMap } from '@/features/authFiles/tokenUsage';
+import { buildAuthFileUsageSummaryMap } from '@/features/authFiles/tokenUsage';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
@@ -62,6 +62,7 @@ import {
   clampCardPageSize,
 } from '@/features/authFiles/pageSize';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
+import { loadModelPrices } from '@/utils/usage';
 import styles from './AuthFilesPage.module.scss';
 
 const easePower3Out = (progress: number) => 1 - (1 - progress) ** 4;
@@ -122,9 +123,10 @@ export function AuthFilesPage() {
   } = useAuthFilesData({ refreshKeyStats });
 
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
-  const authFileUsedTokens = useMemo(
-    () => buildAuthFileUsedTokensMap(files, usageDetails),
-    [files, usageDetails]
+  const modelPrices = useMemo(() => loadModelPrices(), []);
+  const authFileUsageSummary = useMemo(
+    () => buildAuthFileUsageSummaryMap(files, usageDetails, modelPrices),
+    [files, modelPrices, usageDetails]
   );
 
   const {
@@ -788,7 +790,18 @@ export function AuthFilesPage() {
                     resolvedTheme={resolvedTheme}
                     disableControls={disableControls}
                     keyStats={keyStats}
-                    usedTokens={authFileUsedTokens.get(file.name) ?? 0}
+                    usedTokens={authFileUsageSummary.get(file.name)?.totalTokens ?? 0}
+                    usageCost={(() => {
+                      const summary = authFileUsageSummary.get(file.name);
+                      if (!summary || summary.pricedRequestCount <= 0) {
+                        return null;
+                      }
+                      return {
+                        totalCost: summary.totalCost,
+                        unpricedRequestCount: summary.unpricedRequestCount,
+                        unpricedModels: summary.unpricedModels
+                      };
+                    })()}
                     statusBarCache={statusBarCache}
                     onShowModels={showModels}
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}

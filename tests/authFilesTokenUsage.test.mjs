@@ -16,7 +16,7 @@ const formatModuleUrl = `data:text/javascript;base64,${Buffer.from(formatTranspi
 const usageSourcePath = new URL('../src/utils/usage.ts', import.meta.url);
 const usageSourceCode = (await readFile(usageSourcePath, 'utf8')).replace(
   /from ['"]\.\/format['"]/g,
-  `from '${formatModuleUrl}'`,
+  `from '${formatModuleUrl}'`
 );
 const usageTranspiled = ts.transpileModule(usageSourceCode, {
   compilerOptions: {
@@ -27,7 +27,10 @@ const usageTranspiled = ts.transpileModule(usageSourceCode, {
 const usageModuleUrl = `data:text/javascript;base64,${Buffer.from(usageTranspiled.outputText).toString('base64')}`;
 const { computeKeyStatsFromDetails } = await import(usageModuleUrl);
 
-const codexWeeklyLimitSourcePath = new URL('../src/features/authFiles/codexWeeklyLimit.ts', import.meta.url);
+const codexWeeklyLimitSourcePath = new URL(
+  '../src/features/authFiles/codexWeeklyLimit.ts',
+  import.meta.url
+);
 const codexWeeklyLimitSourceCode = await readFile(codexWeeklyLimitSourcePath, 'utf8');
 const codexWeeklyLimitTranspiled = ts.transpileModule(codexWeeklyLimitSourceCode, {
   compilerOptions: {
@@ -42,7 +45,7 @@ const tokenUsageSourceCode = (await readFile(tokenUsageSourcePath, 'utf8'))
   .replace(/from ['"]@\/utils\/usage['"]/g, `from '${usageModuleUrl}'`)
   .replace(
     /from ['"]@\/features\/authFiles\/codexWeeklyLimit['"]/g,
-    `from '${codexWeeklyLimitModuleUrl}'`,
+    `from '${codexWeeklyLimitModuleUrl}'`
   );
 const tokenUsageTranspiled = ts.transpileModule(tokenUsageSourceCode, {
   compilerOptions: {
@@ -51,20 +54,19 @@ const tokenUsageTranspiled = ts.transpileModule(tokenUsageSourceCode, {
   },
 });
 const tokenUsageModuleUrl = `data:text/javascript;base64,${Buffer.from(tokenUsageTranspiled.outputText).toString('base64')}`;
-const { buildAuthFileUsedTokensMap } = await import(tokenUsageModuleUrl);
+const { buildAuthFileUsedTokensMap, buildAuthFileUsageSummaryMap } = await import(
+  tokenUsageModuleUrl
+);
 
 const cardSource = await readFile(
   new URL('../src/features/authFiles/components/AuthFileCard.tsx', import.meta.url),
-  'utf8',
+  'utf8'
 );
 const pageSource = await readFile(
   new URL('../src/pages/AuthFilesPage.tsx', import.meta.url),
-  'utf8',
+  'utf8'
 );
-const zhSource = await readFile(
-  new URL('../src/i18n/locales/zh-CN.json', import.meta.url),
-  'utf8',
-);
+const zhSource = await readFile(new URL('../src/i18n/locales/zh-CN.json', import.meta.url), 'utf8');
 
 test('认证文件统计会按 auth_index/source 聚合累计 totalTokens', () => {
   const stats = computeKeyStatsFromDetails([
@@ -199,19 +201,89 @@ test('认证文件已用量会限制在最近 7 天，且 Codex 429 周限时改
         },
       },
     ],
-    nowMs,
+    nowMs
   );
 
   assert.equal(usedTokensMap.get('codex-a.json'), 500);
   assert.equal(usedTokensMap.get('claude-a.json'), 120);
 });
 
-test('认证文件卡牌展示已用统计，并复用紧凑数值格式化', () => {
+test('认证文件花费会复用同一时间窗口，并标记未定价模型缺口', () => {
+  const nowMs = Date.parse('2026-04-08T12:00:00+08:00');
+  const usageSummaryMap = buildAuthFileUsageSummaryMap(
+    [
+      {
+        name: 'claude-a.json',
+        provider: 'claude',
+        auth_index: 'claude-a',
+        status_message: 'ok',
+      },
+    ],
+    [
+      {
+        timestamp: '2026-04-07T13:00:00+08:00',
+        source: 't:claude-a.json',
+        auth_index: 'claude-a',
+        failed: false,
+        __modelName: 'gpt-5.3-codex',
+        tokens: {
+          input_tokens: 80,
+          output_tokens: 40,
+          reasoning_tokens: 12,
+          cached_tokens: 20,
+          total_tokens: 120,
+        },
+      },
+      {
+        timestamp: '2026-04-07T14:00:00+08:00',
+        source: 't:claude-a.json',
+        auth_index: 'claude-a',
+        failed: false,
+        __modelName: 'grok-4.20-0309',
+        tokens: {
+          input_tokens: 10,
+          output_tokens: 10,
+          reasoning_tokens: 0,
+          cached_tokens: 0,
+          total_tokens: 20,
+        },
+      },
+    ],
+    {
+      'gpt-5.3-codex': {
+        prompt: 1.75,
+        completion: 14,
+        cache: 0.175,
+      },
+    },
+    nowMs
+  );
+
+  const summary = usageSummaryMap.get('claude-a.json');
+  assert.equal(summary.totalTokens, 140);
+  assert.equal(summary.pricedRequestCount, 1);
+  assert.equal(summary.unpricedRequestCount, 1);
+  assert.deepEqual(summary.unpricedModels, ['grok-4.20-0309']);
+  const expectedCost = ((80 - 20) * 1.75 + 20 * 0.175 + 40 * 14) / 1_000_000;
+  assert.ok(Math.abs(summary.totalCost - expectedCost) < 1e-12);
+});
+
+test('认证文件卡牌同时展示已用 Token 与花费，并复用同一份窗口汇总', () => {
   assert.match(cardSource, /t\('auth_files\.tokens_used'\)/);
+  assert.match(cardSource, /t\('auth_files\.cost_used'\)/);
   assert.match(cardSource, /usedTokens: number;/);
+  assert.match(cardSource, /usageCost: AuthFileUsageCost \| null;/);
   assert.match(cardSource, /formatCompactNumber\(usedTokens\)/);
+  assert.match(cardSource, /formatUsd\(usageCost\.totalCost\)/);
   assert.match(cardSource, /styles\.statTokens/);
-  assert.match(pageSource, /buildAuthFileUsedTokensMap\(files,\s*usageDetails\)/);
-  assert.match(pageSource, /usedTokens=\{authFileUsedTokens\.get\(file\.name\) \?\? 0\}/);
+  assert.match(cardSource, /styles\.statCost/);
+  assert.match(cardSource, /styles\.inlineStats[\s\S]*styles\.statTokens[\s\S]*styles\.statCost/);
+  assert.match(pageSource, /buildAuthFileUsageSummaryMap\(files,\s*usageDetails,\s*modelPrices\)/);
+  assert.match(
+    pageSource,
+    /usedTokens=\{authFileUsageSummary\.get\(file\.name\)\?\.totalTokens \?\? 0\}/
+  );
+  assert.match(pageSource, /usageCost=\{\(\(\) => \{/);
   assert.match(zhSource, /"tokens_used"\s*:\s*"已用"/);
+  assert.match(zhSource, /"cost_used"\s*:\s*"花费"/);
 });
