@@ -1543,9 +1543,13 @@
       "output": "输出",
       "reasoning": "思考",
       "cached": "缓存",
+      "avg_rate": "平均速率",
       "avg_tpm": "平均 TPM",
       "avg_rpm": "平均 RPM",
       "avg_rpd": "日均 RPD",
+      "avg_rate_hint": "按实际时间跨度计算",
+      "cost": "消费金额",
+      "priced_requests": "已计费请求",
       "tokens_per_minute": "每分钟 Token",
       "requests_per_minute": "每分钟请求",
       "requests_per_day": "每日请求数"

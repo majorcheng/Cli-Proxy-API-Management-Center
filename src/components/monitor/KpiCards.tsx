@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { UsageData } from '@/pages/MonitorPage';
 import { formatPresetTimeRangeLabel, type PresetTimeRange } from '@/utils/monitor';
 import { calculateMonitorHitRate, extractMonitorHitTokens } from '@/utils/monitorTokenStats';
+import { formatUsd, loadModelPrices, summarizeUsagePricing } from '@/utils/usage';
 import styles from '@/pages/MonitorPage.module.scss';
 
 interface KpiCardsProps {
@@ -27,8 +28,15 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-export function KpiCards({ data, loading, timeRange, authFileAvailable, authFileTotal }: KpiCardsProps) {
+export function KpiCards({
+  data,
+  loading,
+  timeRange,
+  authFileAvailable,
+  authFileTotal,
+}: KpiCardsProps) {
   const { t } = useTranslation();
+  const modelPrices = useMemo(() => loadModelPrices(), []);
 
   // 计算统计数据
   const stats = useMemo(() => {
@@ -103,7 +111,7 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
       const timeSpanDays = Math.max(timeSpanMinutes / (60 * 24), 1);
 
       avgTpm = Math.round(totalTokens / timeSpanMinutes);
-      avgRpm = Math.round(totalRequests / timeSpanMinutes * 10) / 10;
+      avgRpm = Math.round((totalRequests / timeSpanMinutes) * 10) / 10;
       avgRpd = Math.round(totalRequests / timeSpanDays);
     }
 
@@ -124,6 +132,12 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
       avgRpd,
     };
   }, [data]);
+
+  // 消费金额与使用统计页共用同一份本地模型价格，避免两边口径不一致。
+  const pricingSummary = useMemo(
+    () => summarizeUsagePricing(data, modelPrices),
+    [data, modelPrices]
+  );
 
   const timeRangeLabel = formatPresetTimeRangeLabel(timeRange, t);
 
@@ -148,9 +162,7 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
           <span className={styles.kpiLabel}>{t('monitor.kpi.requests')}</span>
           <span className={styles.kpiTag}>{timeRangeLabel}</span>
         </div>
-        <div className={styles.kpiValue}>
-          {loading ? '--' : formatNumber(stats.totalRequests)}
-        </div>
+        <div className={styles.kpiValue}>{loading ? '--' : formatNumber(stats.totalRequests)}</div>
         <div className={styles.kpiMeta}>
           <span className={styles.kpiSuccess}>
             {t('monitor.kpi.success')}: {loading ? '--' : stats.successRequests.toLocaleString()}
@@ -170,43 +182,77 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
           <span className={styles.kpiLabel}>{t('monitor.kpi.tokens')}</span>
           <span className={styles.kpiTag}>{timeRangeLabel}</span>
         </div>
-        <div className={styles.kpiValue}>
-          {loading ? '--' : formatNumber(stats.totalTokens)}
-        </div>
+        <div className={styles.kpiValue}>{loading ? '--' : formatNumber(stats.totalTokens)}</div>
         <div className={styles.kpiMeta}>
-          <span>{t('monitor.kpi.input')}: {loading ? '--' : formatNumber(stats.inputTokens)}</span>
           <span>
-            {t('monitor.kpi.hit')}: {loading ? '--' : `${formatNumber(stats.hitTokens)} (${stats.hitRate.toFixed(1)}%)`}
+            {t('monitor.kpi.input')}: {loading ? '--' : formatNumber(stats.inputTokens)}
           </span>
-          <span>{t('monitor.kpi.output')}: {loading ? '--' : formatNumber(stats.outputTokens)}</span>
+          <span>
+            {t('monitor.kpi.hit')}:{' '}
+            {loading ? '--' : `${formatNumber(stats.hitTokens)} (${stats.hitRate.toFixed(1)}%)`}
+          </span>
+          <span>
+            {t('monitor.kpi.output')}: {loading ? '--' : formatNumber(stats.outputTokens)}
+          </span>
         </div>
       </div>
 
-      {/* 平均 TPM */}
+      {/* 平均速率 */}
       <div className={`${styles.kpiCard} ${styles.purple}`}>
         <div className={styles.kpiTitle}>
-          <span className={styles.kpiLabel}>{t('monitor.kpi.avg_tpm')}</span>
+          <span className={styles.kpiLabel}>{t('monitor.kpi.avg_rate')}</span>
           <span className={styles.kpiTag}>{timeRangeLabel}</span>
         </div>
-        <div className={styles.kpiValue}>
-          {loading ? '--' : formatNumber(stats.avgTpm)}
+        <div className={styles.kpiSplitValue}>
+          <div className={styles.kpiSplitItem}>
+            <span className={styles.kpiSplitLabel}>{t('monitor.kpi.avg_tpm')}</span>
+            <span className={styles.kpiSplitNumber}>
+              {loading ? '--' : formatNumber(stats.avgTpm)}
+            </span>
+          </div>
+          <div className={styles.kpiSplitItem}>
+            <span className={styles.kpiSplitLabel}>{t('monitor.kpi.avg_rpm')}</span>
+            <span className={styles.kpiSplitNumber}>
+              {loading ? '--' : stats.avgRpm.toFixed(1)}
+            </span>
+          </div>
         </div>
         <div className={styles.kpiMeta}>
-          <span>{t('monitor.kpi.tokens_per_minute')}</span>
+          <span>{t('monitor.kpi.avg_rate_hint')}</span>
         </div>
       </div>
 
-      {/* 平均 RPM */}
+      {/* 消费金额 */}
       <div className={`${styles.kpiCard} ${styles.orange}`}>
         <div className={styles.kpiTitle}>
-          <span className={styles.kpiLabel}>{t('monitor.kpi.avg_rpm')}</span>
+          <span className={styles.kpiLabel}>{t('monitor.kpi.cost')}</span>
           <span className={styles.kpiTag}>{timeRangeLabel}</span>
         </div>
         <div className={styles.kpiValue}>
-          {loading ? '--' : stats.avgRpm.toFixed(1)}
+          {loading
+            ? '--'
+            : pricingSummary.pricedRequestCount > 0
+              ? formatUsd(pricingSummary.totalCost)
+              : '--'}
         </div>
         <div className={styles.kpiMeta}>
-          <span>{t('monitor.kpi.requests_per_minute')}</span>
+          {loading ? (
+            <span>--</span>
+          ) : pricingSummary.pricedRequestCount > 0 ? (
+            <>
+              <span>
+                {t('monitor.kpi.priced_requests')}:{' '}
+                {pricingSummary.pricedRequestCount.toLocaleString()}
+              </span>
+              {pricingSummary.unpricedRequestCount > 0 && (
+                <span>{t('usage_stats.cost_partial_notice')}</span>
+              )}
+            </>
+          ) : pricingSummary.unpricedRequestCount > 0 ? (
+            <span>{t('usage_stats.cost_need_price')}</span>
+          ) : (
+            <span>{t('usage_stats.cost_need_usage')}</span>
+          )}
         </div>
       </div>
 
@@ -216,9 +262,7 @@ export function KpiCards({ data, loading, timeRange, authFileAvailable, authFile
           <span className={styles.kpiLabel}>{t('monitor.kpi.avg_rpd')}</span>
           <span className={styles.kpiTag}>{timeRangeLabel}</span>
         </div>
-        <div className={styles.kpiValue}>
-          {loading ? '--' : formatNumber(stats.avgRpd)}
-        </div>
+        <div className={styles.kpiValue}>{loading ? '--' : formatNumber(stats.avgRpd)}</div>
         <div className={styles.kpiMeta}>
           <span>{t('monitor.kpi.requests_per_day')}</span>
         </div>

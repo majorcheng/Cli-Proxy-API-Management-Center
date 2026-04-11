@@ -1543,9 +1543,13 @@
       "output": "Output",
       "reasoning": "Reasoning",
       "cached": "Cached",
+      "avg_rate": "Avg Rate",
       "avg_tpm": "Avg TPM",
       "avg_rpm": "Avg RPM",
       "avg_rpd": "Avg RPD",
+      "avg_rate_hint": "Calculated from the actual time span",
+      "cost": "Spend",
+      "priced_requests": "Priced Requests",
       "tokens_per_minute": "Tokens per minute",
       "requests_per_minute": "Requests per minute",
       "requests_per_day": "Requests per day"
