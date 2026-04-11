@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { USAGE_STATS_STALE_TIME_MS, useNotificationStore, useUsageStatsStore } from '@/stores';
 import { usageApi } from '@/services/api/usage';
 import { downloadBlob } from '@/utils/download';
-import { loadModelPrices, saveModelPrices, type ModelPrice } from '@/utils/usage';
+import {
+  loadModelPrices,
+  saveModelPrices,
+  resolveModelPrices,
+  getOfficialModelPrices,
+  type ModelPrice
+} from '@/utils/usage';
 
 export interface UsagePayload {
   total_requests?: number;
@@ -20,6 +26,7 @@ export interface UseUsageDataReturn {
   error: string;
   lastRefreshedAt: Date | null;
   modelPrices: Record<string, ModelPrice>;
+  modelPriceOverrides: Record<string, ModelPrice>;
   setModelPrices: (prices: Record<string, ModelPrice>) => void;
   loadUsage: () => Promise<void>;
   handleExport: () => Promise<void>;
@@ -40,6 +47,7 @@ export function useUsageData(): UseUsageDataReturn {
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
 
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>({});
+  const [modelPriceOverrides, setModelPriceOverrides] = useState<Record<string, ModelPrice>>({});
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -50,7 +58,21 @@ export function useUsageData(): UseUsageDataReturn {
 
   useEffect(() => {
     void loadUsageStats({ staleTimeMs: USAGE_STATS_STALE_TIME_MS }).catch(() => {});
-    setModelPrices(loadModelPrices());
+    const resolvedPrices = loadModelPrices();
+    const officialPrices = getOfficialModelPrices();
+    const overrides = Object.fromEntries(
+      Object.entries(resolvedPrices).filter(([model, price]) => {
+        const officialPrice = officialPrices[model];
+        if (!officialPrice) return true;
+        return (
+          price.prompt !== officialPrice.prompt ||
+          price.completion !== officialPrice.completion ||
+          price.cache !== officialPrice.cache
+        );
+      })
+    );
+    setModelPrices(resolvedPrices);
+    setModelPriceOverrides(overrides);
   }, [loadUsageStats]);
 
   const handleExport = async () => {
@@ -130,7 +152,21 @@ export function useUsageData(): UseUsageDataReturn {
   };
 
   const handleSetModelPrices = useCallback((prices: Record<string, ModelPrice>) => {
-    setModelPrices(prices);
+    const resolvedPrices = resolveModelPrices(prices);
+    const officialPrices = getOfficialModelPrices();
+    const overrides = Object.fromEntries(
+      Object.entries(prices).filter(([model, price]) => {
+        const officialPrice = officialPrices[model];
+        if (!officialPrice) return true;
+        return (
+          price.prompt !== officialPrice.prompt ||
+          price.completion !== officialPrice.completion ||
+          price.cache !== officialPrice.cache
+        );
+      })
+    );
+    setModelPrices(resolvedPrices);
+    setModelPriceOverrides(overrides);
     saveModelPrices(prices);
   }, []);
 
@@ -144,6 +180,7 @@ export function useUsageData(): UseUsageDataReturn {
     error,
     lastRefreshedAt,
     modelPrices,
+    modelPriceOverrides,
     setModelPrices: handleSetModelPrices,
     loadUsage,
     handleExport,

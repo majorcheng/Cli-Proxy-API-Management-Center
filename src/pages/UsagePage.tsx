@@ -128,6 +128,7 @@ export function UsagePage() {
     error,
     lastRefreshedAt,
     modelPrices,
+    modelPriceOverrides,
     setModelPrices,
     loadUsage,
     handleExport,
@@ -386,6 +387,7 @@ export function UsagePage() {
       <PriceSettingsCard
         modelNames={modelNames}
         modelPrices={modelPrices}
+        modelPriceOverrides={modelPriceOverrides}
         onPricesChange={setModelPrices}
       />
     </div>
