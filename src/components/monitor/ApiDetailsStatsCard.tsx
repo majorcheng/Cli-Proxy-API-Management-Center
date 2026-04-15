@@ -47,6 +47,8 @@ export function ApiDetailsStatsCard({ data, loading }: ApiDetailsStatsCardProps)
       apiStats={apiStats}
       loading={loading}
       hasPrices={hasModelPrices}
+      // 监控页固定高度比 Usage 页更小，启用紧凑模式后 4 条左右的数据也不至于过早出现内部滚动条。
+      compact
       cardClassName={styles.monitorApiDetailsCard}
       subtitle={formatTimeRangeCaption(timeRange, customRange, t)}
       extra={

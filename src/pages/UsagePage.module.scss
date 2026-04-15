@@ -562,6 +562,58 @@
   overscroll-behavior: auto;
 }
 
+// 监控中心复用 API 详细统计时卡片高度更低，需要单独压缩条目间距与徽标尺寸。
+.detailsCompactCard {
+  .apiSortBar {
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .apiSortBtn {
+    padding: 3px 8px;
+  }
+
+  .apiList {
+    gap: 4px;
+  }
+
+  .apiHeader {
+    padding: 8px;
+  }
+
+  .apiInfo {
+    gap: 2px;
+  }
+
+  .apiEndpointRow {
+    gap: 6px;
+  }
+
+  .apiStats {
+    gap: 2px;
+  }
+
+  .apiMetaBadge,
+  .apiBadge {
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+
+  .expandIcon {
+    margin-left: 4px;
+  }
+
+  .apiModels {
+    padding: 8px;
+    gap: 2px;
+  }
+
+  .modelRow {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+}
+
 // Table (80%比例)
 .tableWrapper {
   overflow-x: auto;

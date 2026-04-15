@@ -14,6 +14,7 @@ export interface ApiDetailsCardProps {
   subtitle?: ReactNode;
   extra?: ReactNode;
   showLatestClientIp?: boolean;
+  compact?: boolean;
   cardClassName?: string;
 }
 
@@ -28,6 +29,7 @@ export function ApiDetailsCard({
   subtitle,
   extra,
   showLatestClientIp = false,
+  compact = false,
   cardClassName,
 }: ApiDetailsCardProps) {
   const { t } = useTranslation();
@@ -80,11 +82,12 @@ export function ApiDetailsCard({
       title={title ?? t('usage_stats.api_details')}
       subtitle={subtitle}
       extra={extra}
-      className={
-        cardClassName
-          ? `${styles.detailsFixedCard} ${cardClassName}`
-          : styles.detailsFixedCard
-      }
+      // 监控中心卡片高度更紧，局部切到紧凑样式，避免共享 Usage 页的大间距把少量条目也挤出滚动条。
+      className={[
+        styles.detailsFixedCard,
+        compact ? styles.detailsCompactCard : '',
+        cardClassName ?? '',
+      ].filter(Boolean).join(' ')}
     >
       {loading ? (
         <div className={styles.hint}>{t('common.loading')}</div>

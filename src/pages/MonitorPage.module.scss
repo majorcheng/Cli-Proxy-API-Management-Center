@@ -418,6 +418,17 @@
 .monitorApiDetailsCard {
   --details-card-height: 430px;
   --details-card-height-mobile: 360px;
+  // 监控页左右卡片要保持同高，因此优先收紧卡片内边距，而不是继续改共享卡片默认高度。
+  padding: 16px;
+
+  :global(.card-header) {
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  @include mobile {
+    padding: 14px;
+  }
 }
 
 .monitorStatsTableWrapper {
