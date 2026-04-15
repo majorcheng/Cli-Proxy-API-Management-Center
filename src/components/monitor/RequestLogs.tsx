@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { usageApi, authFilesApi } from '@/services/api';
 import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
 import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
+import { calculateOutputThroughput, formatOutputThroughput } from '@/utils/monitorThroughput';
 import { extractMonitorHitTokens, calculateMonitorHitRate } from '@/utils/monitorTokenStats';
 import { normalizeOpenAIProviderBaseUrl, resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
@@ -11,7 +12,6 @@ import {
   maskSecret,
   formatProviderDisplay,
   formatTimestamp,
-  getRateClassName,
   getProviderDisplayParts,
   filterDataByTimeRange,
   type PresetTimeRange,
@@ -49,6 +49,7 @@ interface LogEntry {
   hitTokens: number;
   hitRate: number;
   outputTokens: number;
+  outputThroughput: number | null;
   totalTokens: number;
   clientIp: string;
 }
@@ -61,7 +62,6 @@ interface ChannelModelRequest {
 // 预计算的统计数据缓存
 interface PrecomputedStats {
   recentRequests: ChannelModelRequest[];
-  successRate: string;
   totalCount: number;
 }
 
@@ -69,7 +69,7 @@ interface PrecomputedStats {
 const MAX_VISIBLE_LOGS = 36;
 
 export function RequestLogs({ data, loading: parentLoading, timeRange, providerMap, providerTypeMap, sourceInfoMap, authFileMap: propAuthFileMap, apiFilter }: RequestLogsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [filterApi, setFilterApi] = useState('');
   const [filterModel, setFilterModel] = useState('');
   const [filterSource, setFilterSource] = useState('');
@@ -198,7 +198,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange, apiFilter]);
 
-  // 获取倒计时显示文本
   const getCountdownText = () => {
     if (logLoading) {
       return t('monitor.logs.refreshing');
@@ -212,7 +211,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return t('monitor.logs.refreshing');
   };
 
-  // 将数据转换为日志条目
+  // 将 usage 明细转换为请求日志条目，并在这里一次性算好输出速率，避免渲染阶段重复分支判断。
   const logEntries = useMemo(() => {
     if (!effectiveData?.apis) return [];
 
@@ -226,7 +225,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           const source = detail.source || 'unknown';
           const { masked } = getProviderDisplayParts(source, providerMap);
           const timestampMs = detail.timestamp ? new Date(detail.timestamp).getTime() : 0;
-          // 使用与请求事件明细相同的 resolveSourceDisplay 解析来源和类型
           let normalizedSource = normalizeCache.get(source);
           if (normalizedSource === undefined) {
             normalizedSource = normalizeUsageSourceId(source);
@@ -242,11 +240,12 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           const inputTokens = detail.tokens.input_tokens || 0;
           const hitTokens = extractMonitorHitTokens(detail.tokens);
           const reasoningEffort = detail.reasoning_effort?.trim() || '';
+          const latencyMs = typeof detail.latency_ms === 'number' ? detail.latency_ms : null;
           entries.push({
             id: `${idCounter++}`,
             timestamp: detail.timestamp,
             timestampMs,
-            latencyMs: typeof detail.latency_ms === 'number' ? detail.latency_ms : null,
+            latencyMs,
             apiKey,
             model: modelName,
             reasoningEffort,
@@ -261,6 +260,11 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             hitTokens,
             hitRate: calculateMonitorHitRate(inputTokens, hitTokens),
             outputTokens: detail.tokens.output_tokens || 0,
+            outputThroughput: calculateOutputThroughput(
+              detail.tokens.output_tokens || 0,
+              latencyMs,
+              detail.failed,
+            ),
             totalTokens: detail.tokens.total_tokens || 0,
             // 新版后端会返回 client_ip；旧快照可能仍只有 auth_index，这里保留回退，
             // 避免历史数据在监控中心中直接显示为空。
@@ -270,15 +274,13 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
       });
     });
 
-    // 按时间倒序排序
     return entries.sort((a, b) => b.timestampMs - a.timestampMs);
   }, [effectiveData, providerMap, providerTypeMap, sourceInfoMap, authFileMap]);
 
-  // 预计算所有条目的统计数据（一次性计算，避免渲染时重复计算）
+  // 预计算每个“渠道 + 模型”分组的累计请求数与最近请求状态，
+  // 请求日志表只保留这两个稳定指标，避免把“成功率”这种聚合指标塞回单行详情里误导阅读。
   const precomputedStats = useMemo(() => {
     const statsMap = new Map<string, PrecomputedStats>();
-
-    // 首先按渠道+模型分组，并按时间排序
     const channelModelGroups: Record<string, { entry: LogEntry; index: number }[]> = {};
 
     logEntries.forEach((entry, index) => {
@@ -289,36 +291,23 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
       channelModelGroups[key].push({ entry, index });
     });
 
-    // 对每个分组按时间正序排序（用于计算累计统计）
     Object.values(channelModelGroups).forEach((group) => {
       group.sort((a, b) => a.entry.timestampMs - b.entry.timestampMs);
     });
 
-    // 计算每个条目的统计数据
     Object.entries(channelModelGroups).forEach(([, group]) => {
-      let successCount = 0;
       let totalCount = 0;
       const recentRequests: ChannelModelRequest[] = [];
 
       group.forEach(({ entry }) => {
         totalCount++;
-        if (!entry.failed) {
-          successCount++;
-        }
-
-        // 维护最近 10 次请求
         recentRequests.push({ failed: entry.failed, timestamp: entry.timestampMs });
         if (recentRequests.length > 10) {
           recentRequests.shift();
         }
 
-        // 计算成功率
-        const successRate = totalCount > 0 ? ((successCount / totalCount) * 100).toFixed(1) : '0.0';
-
-        // 存储该条目的统计数据
         statsMap.set(entry.id, {
           recentRequests: [...recentRequests],
-          successRate,
           totalCount,
         });
       });
@@ -327,7 +316,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return statsMap;
   }, [logEntries]);
 
-  // 获取筛选选项
   const { apis, models, sources, providerTypes } = useMemo(() => {
     const apiSet = new Set<string>();
     const modelSet = new Set<string>();
@@ -351,7 +339,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     };
   }, [logEntries]);
 
-  // 过滤后的数据
   const filteredEntries = useMemo(() => {
     return logEntries.filter((entry) => {
       if (filterApi && entry.apiKey !== filterApi) return false;
@@ -364,12 +351,10 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     });
   }, [logEntries, filterApi, filterModel, filterSource, filterStatus, filterProviderType]);
 
-  // 只保留最近 200 条，避免内部滚动条与页面滚动条叠加
   const visibleEntries = useMemo(() => {
     return filteredEntries.slice(0, MAX_VISIBLE_LOGS);
   }, [filteredEntries]);
 
-  // 格式化数字
   const formatNumber = (num: number) => {
     return num.toLocaleString('zh-CN');
   };
@@ -382,7 +367,8 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return reasoningEffort || '-';
   };
 
-  // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求
+  // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求。
+  // 输出速率严格依赖 latency_ms，因此这里不额外猜测缺失耗时的情况。
   const formatLatency = (latencyMs: number | null) => {
     if (latencyMs === null || Number.isNaN(latencyMs)) {
       return '-';
@@ -395,19 +381,15 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return `${Number(seconds.toFixed(precision))} s`;
   };
 
-  // 获取预计算的统计数据
   const getStats = (entry: LogEntry): PrecomputedStats => {
     return precomputedStats.get(entry.id) || {
       recentRequests: [],
-      successRate: '0.0',
       totalCount: 0,
     };
   };
 
-  // 渲染单行
   const renderRow = (entry: LogEntry) => {
     const stats = getStats(entry);
-    const rateValue = parseFloat(stats.successRate);
     const requestIpDisplay = entry.clientIp || '-';
     const channelTitle = entry.providerBaseUrl || entry.source;
 
@@ -474,8 +456,8 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             entry.maskedKey
           )}
         </td>
-        <td className={getRateClassName(rateValue, styles)}>
-          {stats.successRate}%
+        <td title={entry.outputThroughput === null ? '-' : `${entry.outputTokens} / ${entry.latencyMs} ms`}>
+          {formatOutputThroughput(entry.outputThroughput, i18n.language)}
         </td>
         <td>{formatNumber(stats.totalCount)}</td>
         <td>{formatNumber(entry.inputTokens)}</td>
@@ -500,7 +482,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           </span>
         }
       >
-        {/* 筛选器 */}
         <div className={styles.logFilters}>
           <select
             className={styles.logSelect}
@@ -574,7 +555,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           </select>
         </div>
 
-        {/* 虚拟滚动表格 */}
         <div className={styles.tableWrapper}>
           {showLoading ? (
             <div className={styles.emptyState}>{t('common.loading')}</div>
@@ -593,7 +573,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
                   <th>{t('monitor.logs.header_api')}</th>
                   <th>{t('monitor.logs.header_request_type')}</th>
                   <th>{t('monitor.logs.header_source')}</th>
-                  <th>{t('monitor.logs.header_rate')}</th>
+                  <th>{t('monitor.logs.header_output_throughput')}</th>
                   <th>{t('monitor.logs.header_count')}</th>
                   <th>{t('monitor.logs.header_input')}</th>
                   <th>{t('monitor.logs.header_hit')}</th>
@@ -613,7 +593,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           )}
         </div>
 
-        {/* 统计信息 */}
         {visibleEntries.length > 0 && (
           <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
             {t('monitor.logs.total_count', { count: visibleEntries.length })}

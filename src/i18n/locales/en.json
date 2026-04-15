@@ -1558,10 +1558,13 @@
       "title": "Model Usage Distribution",
       "by_requests": "By Requests",
       "by_tokens": "By Tokens",
+      "by_output_throughput": "By Output Throughput",
       "requests": "Requests",
       "tokens": "Tokens",
+      "output_throughput": "Output Throughput",
       "request_share": "Request Share",
-      "token_share": "Token Share"
+      "token_share": "Token Share",
+      "valid_samples": "{{count}} valid samples"
     },
     "trend": {
       "title": "Daily Usage Trend",
@@ -1662,7 +1665,7 @@
       "header_source": "Source",
       "header_status": "Status",
       "header_recent": "Recent Status",
-      "header_rate": "Success Rate",
+      "header_output_throughput": "Output Throughput",
       "header_count": "Requests",
       "header_input": "Input",
       "header_hit": "Hit (%)",

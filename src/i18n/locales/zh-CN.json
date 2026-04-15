@@ -1558,10 +1558,13 @@
       "title": "模型用量分布",
       "by_requests": "按请求数",
       "by_tokens": "按 Token 数",
+      "by_output_throughput": "按输出速率",
       "requests": "请求",
       "tokens": "Token",
+      "output_throughput": "输出速率",
       "request_share": "请求占比",
-      "token_share": "Token 占比"
+      "token_share": "Token 占比",
+      "valid_samples": "{{count}} 条有效样本"
     },
     "trend": {
       "title": "每日用量趋势",
@@ -1662,7 +1665,7 @@
       "header_source": "请求渠道",
       "header_status": "请求状态",
       "header_recent": "最近请求状态",
-      "header_rate": "成功率",
+      "header_output_throughput": "输出速率",
       "header_count": "请求数",
       "header_input": "输入",
       "header_hit": "命中（百分比）",

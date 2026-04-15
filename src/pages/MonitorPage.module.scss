@@ -609,6 +609,72 @@
   color: var(--text-primary);
 }
 
+.rankingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rankingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+}
+
+.rankingMain {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.rankingIndex {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rankingName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.rankingMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.rankingValue {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.rankingSubValue {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
 // 表格样式
 .tableWrapper {
   overflow-x: auto;
@@ -646,8 +712,8 @@
   th:nth-child(8), td:nth-child(8) { width: 65px; }
   // 请求渠道
   th:nth-child(9), td:nth-child(9) { width: 200px; }
-  // 成功率
-  th:nth-child(10), td:nth-child(10) { width: 70px; }
+  // 输出速率
+  th:nth-child(10), td:nth-child(10) { width: 120px; }
   // 请求数
   th:nth-child(11), td:nth-child(11) { width: 70px; }
   // 输入
