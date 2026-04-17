@@ -17,6 +17,7 @@ import { apiKeysApi } from '@/services/api/apiKeys';
 import { classifyModels } from '@/utils/models';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
+import { resolveSystemPageWebuiRepoUrl } from '@/utils/systemPageLinks';
 import iconGemini from '@/assets/icons/gemini.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconOpenaiLight from '@/assets/icons/openai-light.svg';
@@ -111,6 +112,7 @@ export function SystemPage() {
   const buildTime = auth.serverBuildDate
     ? new Date(auth.serverBuildDate).toLocaleString(i18n.language)
     : t('system_info.version_unknown');
+  const webuiRepoUrl = resolveSystemPageWebuiRepoUrl(config);
 
   const getIconForCategory = (categoryId: string): string | null => {
     const iconEntry = MODEL_CATEGORY_ICONS[categoryId];
@@ -415,7 +417,7 @@ export function SystemPage() {
             </a>
 
             <a
-              href="https://github.com/kongkongyo/Cli-Proxy-API-Management-Center"
+              href={webuiRepoUrl}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.linkCard}
