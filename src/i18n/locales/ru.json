@@ -1468,6 +1468,8 @@
     "openai_provider_added": "Провайдер OpenAI успешно добавлен",
     "openai_provider_updated": "Провайдер OpenAI успешно обновлён",
     "openai_provider_deleted": "Провайдер OpenAI успешно удалён",
+    "openai_provider_test_priority_updated": "Тест завершён. Приоритет обновлён до {{priority}}. {{result}}",
+    "openai_provider_test_all_completed": "Проверка всех OpenAI-совместимых провайдеров завершена",
     "ampcode_updated": "Настройки Ampcode обновлены",
     "ampcode_upstream_api_key_cleared": "Переопределение upstream-ключа Ampcode очищено",
     "openai_model_name_required": "Введите имя модели",

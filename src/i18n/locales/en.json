@@ -1469,6 +1469,8 @@
     "openai_provider_added": "OpenAI provider added successfully",
     "openai_provider_updated": "OpenAI provider updated successfully",
     "openai_provider_deleted": "OpenAI provider deleted successfully",
+    "openai_provider_test_priority_updated": "Test completed. Priority updated to {{priority}}. {{result}}",
+    "openai_provider_test_all_completed": "All OpenAI-compatible providers have been tested",
     "ampcode_updated": "Ampcode configuration updated",
     "ampcode_upstream_api_key_cleared": "Ampcode upstream API key override cleared",
     "openai_model_name_required": "Model name is required",

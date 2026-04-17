@@ -15,6 +15,7 @@ interface ProviderListProps<T> {
   deleteLabel?: string;
   actionsDisabled?: boolean;
   getRowDisabled?: (item: T, index: number) => boolean;
+  renderLeadingActions?: (item: T, index: number) => ReactNode;
   renderExtraActions?: (item: T, index: number) => ReactNode;
 }
 
@@ -30,6 +31,7 @@ export function ProviderList<T>({
   deleteLabel,
   actionsDisabled = false,
   getRowDisabled,
+  renderLeadingActions,
   renderExtraActions,
 }: ProviderListProps<T>) {
   const { t } = useTranslation();
@@ -54,6 +56,7 @@ export function ProviderList<T>({
           >
             <div className="item-meta">{renderContent(item, index)}</div>
             <div className="item-actions">
+              {renderLeadingActions ? renderLeadingActions(item, index) : null}
               <Button
                 variant="secondary"
                 size="sm"

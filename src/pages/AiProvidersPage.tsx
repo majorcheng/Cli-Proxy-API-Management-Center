@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { runOpenAIAllKeysConnectivityTest } from '@/features/openaiProviders/connectivity';
 import {
   AmpcodeSection,
   ClaudeSection,
@@ -54,6 +55,8 @@ export function AiProvidersPage() {
     () => config?.openaiCompatibility || []
   );
   const [openaiRevision, setOpenaiRevision] = useState('');
+  const [isTestingAllOpenAIProviders, setIsTestingAllOpenAIProviders] = useState(false);
+  const [testingOpenAIProviderName, setTestingOpenAIProviderName] = useState<string | null>(null);
 
   const [configSwitchingKey, setConfigSwitchingKey] = useState<string | null>(null);
 
@@ -376,6 +379,156 @@ export function AiProvidersPage() {
     });
   };
 
+  const testOpenai = useCallback(
+    async (index: number) => {
+      const entry = openaiProviders[index];
+      if (!entry || isTestingAllOpenAIProviders || testingOpenAIProviderName) return;
+
+      setTestingOpenAIProviderName(entry.name);
+      try {
+        const result = await runOpenAIAllKeysConnectivityTest({
+          config: {
+            baseUrl: entry.baseUrl,
+            headers: entry.headers,
+            apiKeyEntries: entry.apiKeyEntries || [],
+            availableModels: (entry.models || []).map((model) => model.name.trim()).filter(Boolean),
+            testModel: entry.testModel,
+          },
+          t,
+          onKeyTested: (keyIndex, keyResult) => {
+            const label = `${entry.name} / ${t('common.api_key')} #${keyIndex + 1}`;
+            const message = keyResult.success
+              ? `${label}：${t('ai_providers.openai_test_success')}`
+              : `${label}：${keyResult.message || t('ai_providers.openai_test_failed')}`;
+            showNotification(message, keyResult.success ? 'success' : 'error');
+          },
+        });
+
+        const targetPriority = result.failCount === 0 ? -10 : -100;
+        const state = await providersApi.patchOpenAIProviderByName(
+          entry.name,
+          { priority: targetPriority },
+          openaiRevision,
+        );
+        setOpenaiProviders(state.items);
+        setOpenaiRevision(state.revision);
+        updateConfigValue('openai-compatibility', state.items);
+        showNotification(
+          t('notification.openai_provider_test_priority_updated', {
+            priority: targetPriority,
+            result: result.message,
+          }),
+          result.notificationType,
+        );
+      } catch (err: unknown) {
+        const message = getErrorMessage(err);
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          'status' in err &&
+          Number((err as { status?: number }).status) === 409
+        ) {
+          try {
+            const latest = await providersApi.getOpenAIProvidersState();
+            setOpenaiProviders(latest.items);
+            setOpenaiRevision(latest.revision);
+            updateConfigValue('openai-compatibility', latest.items);
+          } catch {
+            // 冲突后刷新失败时保持当前列表，继续展示原始错误
+          }
+        }
+        showNotification(message, 'error');
+      } finally {
+        setTestingOpenAIProviderName(null);
+      }
+    },
+    [
+      isTestingAllOpenAIProviders,
+      openaiProviders,
+      openaiRevision,
+      t,
+      testingOpenAIProviderName,
+      updateConfigValue,
+      showNotification,
+    ],
+  );
+
+  const testAllOpenaiProviders = useCallback(async () => {
+    if (isTestingAllOpenAIProviders || testingOpenAIProviderName || openaiProviders.length === 0) {
+      return;
+    }
+
+    setIsTestingAllOpenAIProviders(true);
+    try {
+      let currentRevision = openaiRevision;
+      let currentItems = openaiProviders;
+
+      for (const entry of openaiProviders) {
+        setTestingOpenAIProviderName(entry.name);
+        const result = await runOpenAIAllKeysConnectivityTest({
+          config: {
+            baseUrl: entry.baseUrl,
+            headers: entry.headers,
+            apiKeyEntries: entry.apiKeyEntries || [],
+            availableModels: (entry.models || []).map((model) => model.name.trim()).filter(Boolean),
+            testModel: entry.testModel,
+          },
+          t,
+          onKeyTested: (keyIndex, keyResult) => {
+            const label = `${entry.name} / ${t('common.api_key')} #${keyIndex + 1}`;
+            const message = keyResult.success
+              ? `${label}：${t('ai_providers.openai_test_success')}`
+              : `${label}：${keyResult.message || t('ai_providers.openai_test_failed')}`;
+            showNotification(message, keyResult.success ? 'success' : 'error');
+          },
+        });
+
+        const targetPriority = result.failCount === 0 ? -10 : -100;
+        const state = await providersApi.patchOpenAIProviderByName(
+          entry.name,
+          { priority: targetPriority },
+          currentRevision,
+        );
+        currentRevision = state.revision;
+        currentItems = state.items;
+        setOpenaiProviders(currentItems);
+        setOpenaiRevision(currentRevision);
+        updateConfigValue('openai-compatibility', currentItems);
+      }
+
+      showNotification(t('notification.openai_provider_test_all_completed'), 'success');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'status' in err &&
+        Number((err as { status?: number }).status) === 409
+      ) {
+        try {
+          const latest = await providersApi.getOpenAIProvidersState();
+          setOpenaiProviders(latest.items);
+          setOpenaiRevision(latest.revision);
+          updateConfigValue('openai-compatibility', latest.items);
+        } catch {
+          // 冲突后刷新失败时保持当前列表，继续展示原始错误
+        }
+      }
+      showNotification(message, 'error');
+    } finally {
+      setTestingOpenAIProviderName(null);
+      setIsTestingAllOpenAIProviders(false);
+    }
+  }, [
+    isTestingAllOpenAIProviders,
+    openaiProviders,
+    openaiRevision,
+    showNotification,
+    t,
+    testingOpenAIProviderName,
+    updateConfigValue,
+  ]);
+
   return (
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>{t('ai_providers.title')}</h1>
@@ -460,10 +613,14 @@ export function AiProvidersPage() {
             loading={loading}
             disableControls={disableControls}
             isSwitching={isSwitching}
+            isTestingAll={isTestingAllOpenAIProviders}
+            testingProviderName={testingOpenAIProviderName}
             resolvedTheme={resolvedTheme}
             onAdd={() => openEditor('/ai-providers/openai/new')}
             onEdit={(index) => openEditor(`/ai-providers/openai/${index}`)}
             onDelete={deleteOpenai}
+            onTest={(index) => void testOpenai(index)}
+            onTestAll={() => void testAllOpenaiProviders()}
           />
         </div>
       </div>

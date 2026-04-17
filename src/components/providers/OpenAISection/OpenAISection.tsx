@@ -25,10 +25,14 @@ interface OpenAISectionProps {
   loading: boolean;
   disableControls: boolean;
   isSwitching: boolean;
+  isTestingAll?: boolean;
+  testingProviderName?: string | null;
   resolvedTheme: string;
   onAdd: () => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
+  onTest: (index: number) => void;
+  onTestAll: () => void;
 }
 
 export function OpenAISection({
@@ -38,13 +42,18 @@ export function OpenAISection({
   loading,
   disableControls,
   isSwitching,
+  isTestingAll,
+  testingProviderName,
   resolvedTheme,
   onAdd,
   onEdit,
   onDelete,
+  onTest,
+  onTestAll,
 }: OpenAISectionProps) {
   const { t } = useTranslation();
-  const actionsDisabled = disableControls || loading || isSwitching;
+  const actionsDisabled =
+    disableControls || loading || isSwitching || isTestingAll || Boolean(testingProviderName);
 
   const statusBarCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof calculateStatusBarData>>();
@@ -79,9 +88,20 @@ export function OpenAISection({
           </span>
         }
         extra={
-          <Button size="sm" onClick={onAdd} disabled={actionsDisabled}>
-            {t('ai_providers.openai_add_button')}
-          </Button>
+          <div className={styles.modelConfigToolbar}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onTestAll}
+              disabled={actionsDisabled}
+              loading={Boolean(isTestingAll)}
+            >
+              {t('ai_providers.openai_test_all_action')}
+            </Button>
+            <Button size="sm" onClick={onAdd} disabled={actionsDisabled}>
+              {t('ai_providers.openai_add_button')}
+            </Button>
+          </div>
         }
       >
         <ProviderList<OpenAIProviderConfig>
@@ -93,6 +113,17 @@ export function OpenAISection({
           onEdit={onEdit}
           onDelete={onDelete}
           actionsDisabled={actionsDisabled}
+          renderLeadingActions={(item, index) => (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onTest(index)}
+              disabled={actionsDisabled}
+              loading={testingProviderName === item.name}
+            >
+              {t('ai_providers.openai_test_single_action')}
+            </Button>
+          )}
           renderContent={(item) => {
             const stats = getOpenAIProviderStats(item.apiKeyEntries, keyStats, item.prefix);
             const headerEntries = Object.entries(item.headers || {});

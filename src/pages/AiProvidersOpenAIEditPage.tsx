@@ -8,18 +8,19 @@ import { Input } from '@/components/ui/Input';
 import { ModelInputList } from '@/components/ui/ModelInputList';
 import { Select } from '@/components/ui/Select';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
+import {
+  resolveOpenAIConnectivityTestContext,
+  runOpenAIAllKeysConnectivityTest,
+  runOpenAISingleKeyConnectivityTest,
+} from '@/features/openaiProviders/connectivity';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useNotificationStore } from '@/stores';
-import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
 import type { ApiKeyEntry } from '@/types';
-import { buildHeaderObject, hasHeader } from '@/utils/headers';
-import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
+import { buildApiKeyEntry } from '@/components/providers/utils';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
 import type { KeyTestStatus } from '@/stores/useOpenAIEditDraftStore';
 import styles from './AiProvidersPage.module.scss';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
-
-const OPENAI_TEST_TIMEOUT_MS = 30_000;
 
 const getErrorMessage = (err: unknown) => {
   if (err instanceof Error) return err.message;
@@ -184,79 +185,49 @@ export function AiProvidersOpenAIEditPage() {
   // Test a single key by index
   const runSingleKeyTest = useCallback(
     async (keyIndex: number): Promise<boolean> => {
-      const baseUrl = form.baseUrl.trim();
-      if (!baseUrl) {
-        showNotification(t('notification.openai_test_url_required'), 'error');
-        return false;
-      }
-
-      const endpoint = buildOpenAIChatCompletionsEndpoint(baseUrl);
-      if (!endpoint) {
-        showNotification(t('notification.openai_test_url_required'), 'error');
-        return false;
-      }
-
-      const keyEntry = form.apiKeyEntries[keyIndex];
-      if (!keyEntry?.apiKey?.trim()) {
-        setDraftKeyTestStatus(keyIndex, { status: 'error', message: t('notification.openai_test_key_required') });
-        return false;
-      }
-
-      const modelName = testModel.trim() || availableModels[0] || '';
-      if (!modelName) {
-        showNotification(t('notification.openai_test_model_required'), 'error');
-        return false;
-      }
-
-      const customHeaders = buildHeaderObject(form.headers);
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...customHeaders,
-      };
-      if (!hasHeader(headers, 'authorization')) {
-        headers.Authorization = `Bearer ${keyEntry.apiKey.trim()}`;
-      }
-
-      // Set loading state for this key
-      setDraftKeyTestStatus(keyIndex, { status: 'loading', message: '' });
-
       try {
-        const result = await apiCallApi.request(
+        const context = resolveOpenAIConnectivityTestContext(
           {
-            method: 'POST',
-            url: endpoint,
-            header: Object.keys(headers).length ? headers : undefined,
-            data: JSON.stringify({
-              model: modelName,
-              messages: [{ role: 'user', content: 'Hi' }],
-              stream: false,
-              max_tokens: 5,
-            }),
+            baseUrl: form.baseUrl,
+            headers: form.headers,
+            apiKeyEntries: form.apiKeyEntries,
+            availableModels,
+            testModel,
           },
-          { timeout: OPENAI_TEST_TIMEOUT_MS }
+          t,
         );
-
-        if (result.statusCode < 200 || result.statusCode >= 300) {
-          throw new Error(getApiCallErrorMessage(result));
-        }
-
-        setDraftKeyTestStatus(keyIndex, { status: 'success', message: '' });
-        return true;
+        return await runOpenAISingleKeyConnectivityTest({
+          config: {
+            baseUrl: form.baseUrl,
+            headers: form.headers,
+            apiKeyEntries: form.apiKeyEntries,
+            availableModels,
+            testModel,
+          },
+          endpoint: context.endpoint,
+          keyIndex,
+          modelName: context.modelName,
+          t,
+          onStatusChange: (status) => setDraftKeyTestStatus(keyIndex, status),
+        });
       } catch (err: unknown) {
         const message = getErrorMessage(err);
-        const errorCode =
-          typeof err === 'object' && err !== null && 'code' in err
-            ? String((err as { code?: string }).code)
-            : '';
-        const isTimeout = errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
-        const errorMessage = isTimeout
-          ? t('ai_providers.openai_test_timeout', { seconds: OPENAI_TEST_TIMEOUT_MS / 1000 })
-          : message;
-        setDraftKeyTestStatus(keyIndex, { status: 'error', message: errorMessage });
+        if (message) {
+          showNotification(message, 'error');
+        }
         return false;
       }
     },
-    [form.baseUrl, form.apiKeyEntries, form.headers, testModel, availableModels, t, setDraftKeyTestStatus, showNotification]
+    [
+      availableModels,
+      form.apiKeyEntries,
+      form.baseUrl,
+      form.headers,
+      setDraftKeyTestStatus,
+      showNotification,
+      t,
+      testModel,
+    ],
   );
 
   const testSingleKey = useCallback(
@@ -276,86 +247,54 @@ export function AiProvidersOpenAIEditPage() {
   const testAllKeys = useCallback(async () => {
     if (isTestingKeys) return;
 
-    const baseUrl = form.baseUrl.trim();
-    if (!baseUrl) {
-      const message = t('notification.openai_test_url_required');
-      setTestStatus('error');
-      setTestMessage(message);
-      showNotification(message, 'error');
-      return;
-    }
-
-    const endpoint = buildOpenAIChatCompletionsEndpoint(baseUrl);
-    if (!endpoint) {
-      const message = t('notification.openai_test_url_required');
-      setTestStatus('error');
-      setTestMessage(message);
-      showNotification(message, 'error');
-      return;
-    }
-
-    const modelName = testModel.trim() || availableModels[0] || '';
-    if (!modelName) {
-      const message = t('notification.openai_test_model_required');
-      setTestStatus('error');
-      setTestMessage(message);
-      showNotification(message, 'error');
-      return;
-    }
-
-    const validKeyIndexes = form.apiKeyEntries
-      .map((entry, index) => (entry.apiKey?.trim() ? index : -1))
-      .filter((index) => index >= 0);
-    if (validKeyIndexes.length === 0) {
-      const message = t('notification.openai_test_key_required');
-      setTestStatus('error');
-      setTestMessage(message);
-      showNotification(message, 'error');
-      return;
-    }
-
     setIsTestingKeys(true);
     setTestStatus('loading');
     setTestMessage(t('ai_providers.openai_test_running'));
     resetDraftKeyTestStatuses(form.apiKeyEntries.length);
 
     try {
-      const results = await Promise.all(validKeyIndexes.map((index) => runSingleKeyTest(index)));
-
-      const successCount = results.filter(Boolean).length;
-      const failCount = validKeyIndexes.length - successCount;
-
-      if (failCount === 0) {
-        const message = t('ai_providers.openai_test_all_success', { count: successCount });
-        setTestStatus('success');
-        setTestMessage(message);
-        showNotification(message, 'success');
-      } else if (successCount === 0) {
-        const message = t('ai_providers.openai_test_all_failed', { count: failCount });
-        setTestStatus('error');
-        setTestMessage(message);
-        showNotification(message, 'error');
-      } else {
-        const message = t('ai_providers.openai_test_all_partial', { success: successCount, failed: failCount });
-        setTestStatus('error');
-        setTestMessage(message);
-        showNotification(message, 'warning');
-      }
+      const result = await runOpenAIAllKeysConnectivityTest({
+        config: {
+          baseUrl: form.baseUrl,
+          headers: form.headers,
+          apiKeyEntries: form.apiKeyEntries,
+          availableModels,
+          testModel,
+        },
+        t,
+        onStatusChange: (keyIndex, status) => setDraftKeyTestStatus(keyIndex, status),
+        onKeyTested: (keyIndex, keyResult) => {
+          const label = `${t('common.api_key')} #${keyIndex + 1}`;
+          const message = keyResult.success
+            ? `${label}：${t('ai_providers.openai_test_success')}`
+            : `${label}：${keyResult.message || t('ai_providers.openai_test_failed')}`;
+          showNotification(message, keyResult.success ? 'success' : 'error');
+        },
+      });
+      setTestStatus(result.failCount === 0 ? 'success' : 'error');
+      setTestMessage(result.message);
+      showNotification(result.message, result.notificationType);
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      setTestStatus('error');
+      setTestMessage(message);
+      showNotification(message, 'error');
     } finally {
       setIsTestingKeys(false);
     }
   }, [
-    isTestingKeys,
-    form.baseUrl,
     form.apiKeyEntries,
-    testModel,
     availableModels,
-    t,
-    setTestStatus,
-    setTestMessage,
+    form.baseUrl,
+    form.headers,
+    isTestingKeys,
     resetDraftKeyTestStatuses,
-    runSingleKeyTest,
+    setDraftKeyTestStatus,
+    setTestMessage,
+    setTestStatus,
     showNotification,
+    t,
+    testModel,
   ]);
 
   const openOpenaiModelDiscovery = () => {

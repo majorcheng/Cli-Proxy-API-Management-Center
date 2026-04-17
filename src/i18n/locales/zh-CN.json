@@ -1469,6 +1469,8 @@
     "openai_provider_added": "OpenAI提供商添加成功",
     "openai_provider_updated": "OpenAI提供商更新成功",
     "openai_provider_deleted": "OpenAI提供商删除成功",
+    "openai_provider_test_priority_updated": "测试完成，优先级已更新为 {{priority}}。{{result}}",
+    "openai_provider_test_all_completed": "全部 OpenAI 兼容提供商测试完成",
     "ampcode_updated": "Ampcode 配置已更新",
     "ampcode_upstream_api_key_cleared": "Ampcode upstream API key 覆盖已清除",
     "openai_model_name_required": "请填写模型名称",

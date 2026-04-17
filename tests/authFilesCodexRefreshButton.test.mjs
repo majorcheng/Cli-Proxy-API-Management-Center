@@ -49,7 +49,10 @@ test('认证文件卡牌在 Codex utility actions 区提供 RT 刷新按钮', ()
   assert.match(cardSource, /title=\{codexRefreshTitle\}/);
   assert.match(cardSource, /className=\{`\$\{styles\.iconButton\} \$\{styles\.cardRefreshButton\}`\}/);
   assert.match(cardSource, /loading=\{codexRefreshing\}/);
-  assert.match(cardSource, /<IconRefreshCw className=\{`\$\{styles\.actionIcon\} \$\{styles\.cardRefreshIcon\}`\} size=\{16\} \/>/);
+  assert.match(
+    cardSource,
+    /<IconRefreshCw\s+className=\{`\$\{styles\.actionIcon\} \$\{styles\.cardRefreshIcon\}`\}\s+size=\{16\}\s*\/>/
+  );
 });
 
 test('认证文件页已把单卡 RT 刷新回调与 loading 状态下发到卡片', () => {
