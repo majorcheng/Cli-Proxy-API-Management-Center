@@ -462,8 +462,12 @@ export function AiProvidersPage() {
     try {
       let currentRevision = openaiRevision;
       let currentItems = openaiProviders;
+      // 一键测试全部只覆盖已经进入自动测试优先级池的 provider。
+      const testableOpenAIProviders = openaiProviders.filter(
+        (entry) => entry.priority === -10 || entry.priority === -100,
+      );
 
-      for (const entry of openaiProviders) {
+      for (const entry of testableOpenAIProviders) {
         setTestingOpenAIProviderName(entry.name);
         const result = await runOpenAIAllKeysConnectivityTest({
           config: {
