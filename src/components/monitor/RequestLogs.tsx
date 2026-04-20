@@ -2,7 +2,13 @@ import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { usageApi, authFilesApi } from '@/services/api';
-import { normalizeUsageSourceId, normalizeAuthIndex } from '@/utils/usage';
+import {
+  calculateCost,
+  formatUsd,
+  loadModelPrices,
+  normalizeUsageSourceId,
+  normalizeAuthIndex,
+} from '@/utils/usage';
 import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
 import { calculateOutputThroughput, formatOutputThroughput } from '@/utils/monitorThroughput';
 import { extractMonitorHitTokens, calculateMonitorHitRate } from '@/utils/monitorTokenStats';
@@ -50,6 +56,7 @@ interface LogEntry {
   hitRate: number;
   outputTokens: number;
   outputThroughput: number | null;
+  cost: number | null;
   totalTokens: number;
   clientIp: string;
 }
@@ -67,6 +74,21 @@ interface PrecomputedStats {
 
 // 请求日志仅展示最近 36 条，避免页面出现双层纵向滚动
 const MAX_VISIBLE_LOGS = 36;
+
+// 监控表格把模型与思考挡位合并展示，方便直接按单条请求识别完整组合。
+const formatModelWithEffort = (model: string, reasoningEffort: string) => {
+  const normalizedModel = model.trim() || '-';
+  const normalizedEffort = reasoningEffort.trim();
+  return normalizedEffort ? `${normalizedModel}(${normalizedEffort})` : normalizedModel;
+};
+
+// 单条金额只对已定价模型显示数值，缺少价格配置时保留占位符。
+const formatRequestCost = (cost: number | null) => {
+  if (cost === null) {
+    return '--';
+  }
+  return formatUsd(cost);
+};
 
 export function RequestLogs({ data, loading: parentLoading, timeRange, providerMap, providerTypeMap, sourceInfoMap, authFileMap: propAuthFileMap, apiFilter }: RequestLogsProps) {
   const { t, i18n } = useTranslation();
@@ -94,6 +116,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
   const effectiveData = logData || data;
   // 只在首次加载且没有数据时显示 loading 状态
   const showLoading = (parentLoading && isFirstLoad && !effectiveData) || (logLoading && !effectiveData);
+  const modelPrices = useMemo(() => loadModelPrices(), []);
 
   // 当父组件数据加载完成时，标记首次加载完成
   useEffect(() => {
@@ -241,6 +264,18 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           const hitTokens = extractMonitorHitTokens(detail.tokens);
           const reasoningEffort = detail.reasoning_effort?.trim() || '';
           const latencyMs = typeof detail.latency_ms === 'number' ? detail.latency_ms : null;
+          // 单条消费金额沿用监控页与 usage 页统一的模型价格口径；
+          // 已定价模型显示精确金额，未定价模型保留为短横线，避免把缺少价格误读成零消费。
+          const cost = modelPrices[modelName]
+            ? calculateCost(
+              {
+                ...detail,
+                auth_index: Number(detail.auth_index) || 0,
+                __modelName: modelName,
+              },
+              modelPrices,
+            )
+            : null;
           entries.push({
             id: `${idCounter++}`,
             timestamp: detail.timestamp,
@@ -265,6 +300,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
               latencyMs,
               detail.failed,
             ),
+            cost,
             totalTokens: detail.tokens.total_tokens || 0,
             // 新版后端会返回 client_ip；旧快照可能仍只有 auth_index，这里保留回退，
             // 避免历史数据在监控中心中直接显示为空。
@@ -275,7 +311,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     });
 
     return entries.sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [effectiveData, providerMap, providerTypeMap, sourceInfoMap, authFileMap]);
+  }, [effectiveData, providerMap, providerTypeMap, sourceInfoMap, authFileMap, modelPrices]);
 
   // 预计算每个“渠道 + 模型”分组的累计请求数与最近请求状态，
   // 请求日志表只保留这两个稳定指标，避免把“成功率”这种聚合指标塞回单行详情里误导阅读。
@@ -284,7 +320,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     const channelModelGroups: Record<string, { entry: LogEntry; index: number }[]> = {};
 
     logEntries.forEach((entry, index) => {
-      const key = `${entry.source}|||${entry.model}`;
+      const key = `${entry.source}|||${entry.model}|||${entry.reasoningEffort}`;
       if (!channelModelGroups[key]) {
         channelModelGroups[key] = [];
       }
@@ -363,10 +399,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return `${formatNumber(hitTokens)} (${(hitRate * 100).toFixed(1)}%)`;
   };
 
-  const formatReasoningEffortDisplay = (reasoningEffort: string) => {
-    return reasoningEffort || '-';
-  };
-
   // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求。
   // 输出速率严格依赖 latency_ms，因此这里不额外猜测缺失耗时的情况。
   const formatLatency = (latencyMs: number | null) => {
@@ -392,14 +424,12 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     const stats = getStats(entry);
     const requestIpDisplay = entry.clientIp || '-';
     const channelTitle = entry.providerBaseUrl || entry.source;
+    const modelDisplay = formatModelWithEffort(entry.model, entry.reasoningEffort);
 
     return (
       <>
-        <td title={entry.model}>
-          {entry.model}
-        </td>
-        <td title={formatReasoningEffortDisplay(entry.reasoningEffort)}>
-          {formatReasoningEffortDisplay(entry.reasoningEffort)}
+        <td title={modelDisplay}>
+          {modelDisplay}
         </td>
         <td>
           <span className={`${styles.statusPill} ${entry.failed ? styles.failed : styles.success}`}>
@@ -458,6 +488,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
         </td>
         <td title={entry.outputThroughput === null ? '-' : `${entry.outputTokens} / ${entry.latencyMs} ms`}>
           {formatOutputThroughput(entry.outputThroughput, i18n.language)}
+        </td>
+        <td title={formatRequestCost(entry.cost)}>
+          {formatRequestCost(entry.cost)}
         </td>
         <td>{formatNumber(stats.totalCount)}</td>
         <td>{formatNumber(entry.inputTokens)}</td>
@@ -565,7 +598,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
               <thead>
                 <tr>
                   <th>{t('monitor.logs.header_model')}</th>
-                  <th>{t('monitor.logs.header_reasoning_effort')}</th>
                   <th>{t('monitor.logs.header_status')}</th>
                   <th>{t('monitor.logs.header_latency')}</th>
                   <th>{t('monitor.logs.header_recent')}</th>
@@ -574,6 +606,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
                   <th>{t('monitor.logs.header_request_type')}</th>
                   <th>{t('monitor.logs.header_source')}</th>
                   <th>{t('monitor.logs.header_output_throughput')}</th>
+                  <th>{t('monitor.logs.header_cost')}</th>
                   <th>{t('monitor.logs.header_count')}</th>
                   <th>{t('monitor.logs.header_input')}</th>
                   <th>{t('monitor.logs.header_hit')}</th>

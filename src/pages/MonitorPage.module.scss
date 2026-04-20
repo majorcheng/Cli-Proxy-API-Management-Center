@@ -695,9 +695,9 @@
 // 虚拟滚动表格固定列宽
 .virtualTable {
   table-layout: fixed;
-  // 请求日志新增列后，需要同步扩列宽配置；
-  // 否则最后一列会吞掉多余宽度，表现为左侧列挤在一起、右侧留出大片空白。
-  min-width: 1600px;
+  // 请求日志的模型列现在承载“模型 + 思考挡位”，并新增单条金额列；
+  // 固定总宽后，表格横向滚动与各列截断会保持稳定。
+  min-width: 1680px;
 
   th, td {
     overflow: hidden;
@@ -705,26 +705,26 @@
     white-space: nowrap;
   }
 
-  // 模型
-  th:nth-child(1), td:nth-child(1) { width: 150px; }
-  // 思考档位
-  th:nth-child(2), td:nth-child(2) { width: 80px; }
+  // 模型（含思考挡位）
+  th:nth-child(1), td:nth-child(1) { width: 180px; }
   // 状态
-  th:nth-child(3), td:nth-child(3) { width: 60px; }
+  th:nth-child(2), td:nth-child(2) { width: 60px; }
   // 响应时间
-  th:nth-child(4), td:nth-child(4) { width: 90px; }
+  th:nth-child(3), td:nth-child(3) { width: 90px; }
   // 最近请求状态
-  th:nth-child(5), td:nth-child(5) { width: 100px; }
+  th:nth-child(4), td:nth-child(4) { width: 100px; }
   // Auth 认证来源
-  th:nth-child(6), td:nth-child(6) { width: 80px; }
+  th:nth-child(5), td:nth-child(5) { width: 80px; }
   // API
-  th:nth-child(7), td:nth-child(7) { width: 100px; }
+  th:nth-child(6), td:nth-child(6) { width: 100px; }
   // 请求类型
-  th:nth-child(8), td:nth-child(8) { width: 65px; }
+  th:nth-child(7), td:nth-child(7) { width: 65px; }
   // 请求渠道
-  th:nth-child(9), td:nth-child(9) { width: 200px; }
+  th:nth-child(8), td:nth-child(8) { width: 200px; }
   // 输出速率
-  th:nth-child(10), td:nth-child(10) { width: 120px; }
+  th:nth-child(9), td:nth-child(9) { width: 120px; }
+  // 单条金额
+  th:nth-child(10), td:nth-child(10) { width: 90px; }
   // 请求数
   th:nth-child(11), td:nth-child(11) { width: 70px; }
   // 输入
