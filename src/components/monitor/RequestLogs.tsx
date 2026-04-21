@@ -4,7 +4,6 @@ import { Card } from '@/components/ui/Card';
 import { usageApi, authFilesApi } from '@/services/api';
 import {
   calculateCost,
-  formatUsd,
   loadModelPrices,
   normalizeUsageSourceId,
   normalizeAuthIndex,
@@ -87,7 +86,10 @@ const formatRequestCost = (cost: number | null) => {
   if (cost === null) {
     return '--';
   }
-  return formatUsd(cost);
+  return `$${cost.toLocaleString(undefined, {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })}`;
 };
 
 export function RequestLogs({ data, loading: parentLoading, timeRange, providerMap, providerTypeMap, sourceInfoMap, authFileMap: propAuthFileMap, apiFilter }: RequestLogsProps) {
