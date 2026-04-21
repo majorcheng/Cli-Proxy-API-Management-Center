@@ -21,8 +21,8 @@ const enLocale = JSON.parse(
 test('请求日志把三项 Token 与缓存命中百分比汇总进 TOKEN 列', () => {
   assert.match(requestLogsSource, /extractMonitorHitTokens\(detail\.tokens\)/);
   assert.match(requestLogsSource, /calculateMonitorHitRate\(rawInputTokens, cacheReadTokens\)/);
-  assert.match(requestLogsSource, /const getNetInputTokens = \(inputTokens: number, cacheReadTokens: number\) =>/);
-  assert.match(requestLogsSource, /inputTokens: getNetInputTokens\(rawInputTokens, cacheReadTokens\),/);
+  assert.match(requestLogsSource, /calculateMonitorNetInputTokens,/);
+  assert.match(requestLogsSource, /inputTokens: calculateMonitorNetInputTokens\(rawInputTokens, cacheReadTokens\),/);
   assert.match(requestLogsSource, /cacheReadTokens,/);
   assert.match(requestLogsSource, /hitRate: calculateMonitorHitRate\(rawInputTokens, cacheReadTokens\),/);
   assert.match(requestLogsSource, /const TOKEN_CELL_ITEMS = \[/);

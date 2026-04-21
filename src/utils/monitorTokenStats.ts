@@ -34,3 +34,13 @@ export function calculateMonitorHitRate(inputTokens: number, hitTokens: number):
 
   return Math.min(normalizedHitTokens / normalizedInputTokens, 1);
 }
+
+/**
+ * 监控页“输入 Token”与请求日志保持同一口径：原始输入减去命中 Token。
+ * 命中属于输入子集，因此这里对结果做非负保护，避免异常快照出现负数。
+ */
+export function calculateMonitorNetInputTokens(inputTokens: number, hitTokens: number): number {
+  const normalizedInputTokens = normalizeNonNegativeTokenCount(inputTokens);
+  const normalizedHitTokens = normalizeNonNegativeTokenCount(hitTokens);
+  return Math.max(normalizedInputTokens - normalizedHitTokens, 0);
+}

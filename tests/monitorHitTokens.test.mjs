@@ -14,7 +14,11 @@ const utilTranspiled = ts.transpileModule(utilSource, {
   },
 });
 const utilModuleUrl = `data:text/javascript;base64,${Buffer.from(utilTranspiled.outputText).toString('base64')}`;
-const { extractMonitorHitTokens, calculateMonitorHitRate } = await import(utilModuleUrl);
+const {
+  extractMonitorHitTokens,
+  calculateMonitorHitRate,
+  calculateMonitorNetInputTokens,
+} = await import(utilModuleUrl);
 
 const kpiCardsSource = await readFile(
   new URL('../src/components/monitor/KpiCards.tsx', import.meta.url),
@@ -46,10 +50,19 @@ test('监控中心命中占比按 命中/输入 计算，并限制在 0% 到 100
   assert.equal(calculateMonitorHitRate(-1, 20), 0);
 });
 
+test('监控中心净输入 Token 口径按 输入减命中 计算，并限制最小值为 0', () => {
+  assert.equal(calculateMonitorNetInputTokens(1000, 250), 750);
+  assert.equal(calculateMonitorNetInputTokens(100, 200), 0);
+  assert.equal(calculateMonitorNetInputTokens(-1, 20), 0);
+});
+
 test('Tokens 卡片与每小时图表源码都接入命中 Token 展示', () => {
   assert.match(kpiCardsSource, /t\('monitor\.kpi\.hit'\)/);
   assert.match(kpiCardsSource, /stats\.hitTokens/);
   assert.match(kpiCardsSource, /stats\.hitRate\.toFixed\(1\)/);
+  assert.match(kpiCardsSource, /let rawInputTokens = 0;/);
+  assert.match(kpiCardsSource, /calculateMonitorNetInputTokens\(requestRawInputTokens, requestHitTokens\)/);
+  assert.match(kpiCardsSource, /calculateMonitorHitRate\(rawInputTokens, hitTokens\) \* 100/);
 
   assert.match(hourlyTokenChartSource, /t\('monitor\.hourly_token\.hit'\)/);
   assert.match(hourlyTokenChartSource, /hourlyData\.hitTokens/);

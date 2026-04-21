@@ -10,7 +10,11 @@ import {
 } from '@/utils/usage';
 import { normalizeRequestClientIp } from '@/utils/requestLogClientIp';
 import { calculateOutputThroughput, formatOutputThroughput } from '@/utils/monitorThroughput';
-import { extractMonitorHitTokens, calculateMonitorHitRate } from '@/utils/monitorTokenStats';
+import {
+  extractMonitorHitTokens,
+  calculateMonitorHitRate,
+  calculateMonitorNetInputTokens,
+} from '@/utils/monitorTokenStats';
 import { normalizeOpenAIProviderBaseUrl, resolveSourceDisplay } from '@/utils/sourceResolver';
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import {
@@ -78,13 +82,9 @@ const formatModelWithEffort = (model: string, reasoningEffort: string) => {
   return normalizedEffort ? `${normalizedModel}(${normalizedEffort})` : normalizedModel;
 };
 
-// 请求状态列复用成功/失败配色，保持状态语义和旧视觉一致。
-const getStatusPillClassName = (failed: boolean) =>
-  `${styles.statusPill} ${styles.modelStatusPill} ${failed ? styles.failed : styles.success}`;
-
-// usage 明细里的缓存读取属于输入 Token 的子集，请求日志中的输入列展示净输入值。
-const getNetInputTokens = (inputTokens: number, cacheReadTokens: number) =>
-  Math.max(inputTokens - cacheReadTokens, 0);
+// 请求模型列只保留文字颜色：成功沿用正文色，失败使用错误色，避免额外背景干扰。
+const getModelTextClassName = (failed: boolean) =>
+  `${styles.modelStatusText} ${failed ? styles.modelStatusFailed : styles.modelStatusNormal}`;
 
 // TOKEN 合并列统一复用图标，便于在一格里同时表达净输入、输出与缓存读取。
 const TOKEN_CELL_ITEMS = [
@@ -305,7 +305,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             providerBaseUrl,
             maskedKey: masked,
             failed: detail.failed,
-            inputTokens: getNetInputTokens(rawInputTokens, cacheReadTokens),
+            inputTokens: calculateMonitorNetInputTokens(rawInputTokens, cacheReadTokens),
             outputTokens: detail.tokens.output_tokens || 0,
             cacheReadTokens,
             hitRate: calculateMonitorHitRate(rawInputTokens, cacheReadTokens),
@@ -464,7 +464,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           {requestIpDisplay}
         </td>
         <td title={modelDisplay}>
-          <span className={getStatusPillClassName(entry.failed)}>
+          <span className={getModelTextClassName(entry.failed)}>
             {modelDisplay}
           </span>
         </td>

@@ -2,7 +2,11 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UsageData } from '@/pages/MonitorPage';
 import { formatPresetTimeRangeLabel, type PresetTimeRange } from '@/utils/monitor';
-import { calculateMonitorHitRate, extractMonitorHitTokens } from '@/utils/monitorTokenStats';
+import {
+  calculateMonitorHitRate,
+  calculateMonitorNetInputTokens,
+  extractMonitorHitTokens,
+} from '@/utils/monitorTokenStats';
 import { formatUsd, loadModelPrices, summarizeUsagePricing } from '@/utils/usage';
 import styles from '@/pages/MonitorPage.module.scss';
 
@@ -63,6 +67,7 @@ export function KpiCards({
     let successRequests = 0;
     let failedRequests = 0;
     let totalTokens = 0;
+    let rawInputTokens = 0;
     let inputTokens = 0;
     let hitTokens = 0;
     let outputTokens = 0;
@@ -84,9 +89,12 @@ export function KpiCards({
           }
 
           totalTokens += detail.tokens.total_tokens || 0;
-          inputTokens += detail.tokens.input_tokens || 0;
+          const requestRawInputTokens = detail.tokens.input_tokens || 0;
+          rawInputTokens += requestRawInputTokens;
           // 监控中心把 usage snapshot 里的 cached/cache tokens 统一展示为“命中 Token”。
-          hitTokens += extractMonitorHitTokens(detail.tokens);
+          const requestHitTokens = extractMonitorHitTokens(detail.tokens);
+          hitTokens += requestHitTokens;
+          inputTokens += calculateMonitorNetInputTokens(requestRawInputTokens, requestHitTokens);
           outputTokens += detail.tokens.output_tokens || 0;
           reasoningTokens += detail.tokens.reasoning_tokens || 0;
           cachedTokens += detail.tokens.cached_tokens || 0;
@@ -99,7 +107,7 @@ export function KpiCards({
     });
 
     const successRate = totalRequests > 0 ? (successRequests / totalRequests) * 100 : 0;
-    const hitRate = calculateMonitorHitRate(inputTokens, hitTokens) * 100;
+    const hitRate = calculateMonitorHitRate(rawInputTokens, hitTokens) * 100;
 
     // 计算 TPM 和 RPM（基于实际时间跨度）
     let avgTpm = 0;

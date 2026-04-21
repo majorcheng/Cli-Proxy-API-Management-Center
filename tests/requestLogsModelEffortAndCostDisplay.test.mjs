@@ -23,9 +23,9 @@ test('请求日志会把模型名与 reasoning_effort 合并显示', () => {
   assert.ok(
     requestLogsSource.includes('return normalizedEffort ? `${normalizedModel}(${normalizedEffort})` : normalizedModel;'),
   );
-  assert.match(requestLogsSource, /const getStatusPillClassName = \(failed: boolean\) =>/);
+  assert.match(requestLogsSource, /const getModelTextClassName = \(failed: boolean\) =>/);
   assert.match(requestLogsSource, /const modelDisplay = formatModelWithEffort\(entry\.model, entry\.reasoningEffort\)/);
-  assert.match(requestLogsSource, /className=\{getStatusPillClassName\(entry\.failed\)\}/);
+  assert.match(requestLogsSource, /className=\{getModelTextClassName\(entry\.failed\)\}/);
 });
 
 test('请求日志保留最近历史请求状态条', () => {
@@ -57,7 +57,9 @@ test('请求日志表格按指定排障顺序同步调整列宽', () => {
   assert.match(monitorPageStyles, /th:nth-child\(1\), td:nth-child\(1\)\s*\{\s*width:\s*50px;\s*\}/);
   assert.match(monitorPageStyles, /th:nth-child\(2\), td:nth-child\(2\)\s*\{\s*width:\s*50px;\s*\}/);
   assert.match(monitorPageStyles, /th:nth-child\(3\), td:nth-child\(3\)\s*\{\s*width:\s*80px;\s*\}/);
-  assert.match(monitorPageStyles, /\.modelStatusPill\s*\{[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
+  assert.match(monitorPageStyles, /\.modelStatusText\s*\{[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
+  assert.match(monitorPageStyles, /\.modelStatusNormal\s*\{[\s\S]*color:\s*var\(--text-primary\)/);
+  assert.match(monitorPageStyles, /\.modelStatusFailed\s*\{[\s\S]*color:\s*var\(--danger-color,\s*#ef4444\)/);
   assert.match(monitorPageStyles, /th:nth-child\(7\), td:nth-child\(7\)\s*\{\s*width:\s*50px;\s*\}/);
   assert.match(monitorPageStyles, /th:nth-child\(11\), td:nth-child\(11\)\s*\{\s*width:\s*150px;\s*\}/);
 });
