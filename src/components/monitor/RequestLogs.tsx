@@ -51,28 +51,25 @@ interface LogEntry {
   maskedKey: string;
   failed: boolean;
   inputTokens: number;
-  hitTokens: number;
-  hitRate: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  hitRate: number;
   outputThroughput: number | null;
   cost: number | null;
-  totalTokens: number;
   clientIp: string;
 }
+
+// 请求日志仅展示最近 36 条，避免页面出现双层纵向滚动
+const MAX_VISIBLE_LOGS = 36;
 
 interface ChannelModelRequest {
   failed: boolean;
   timestamp: number;
 }
 
-// 预计算的统计数据缓存
 interface PrecomputedStats {
   recentRequests: ChannelModelRequest[];
-  totalCount: number;
 }
-
-// 请求日志仅展示最近 36 条，避免页面出现双层纵向滚动
-const MAX_VISIBLE_LOGS = 36;
 
 // 监控表格把模型与思考挡位合并展示，方便直接按单条请求识别完整组合。
 const formatModelWithEffort = (model: string, reasoningEffort: string) => {
@@ -80,6 +77,21 @@ const formatModelWithEffort = (model: string, reasoningEffort: string) => {
   const normalizedEffort = reasoningEffort.trim();
   return normalizedEffort ? `${normalizedModel}(${normalizedEffort})` : normalizedModel;
 };
+
+// 请求状态列复用成功/失败配色，保持状态语义和旧视觉一致。
+const getStatusPillClassName = (failed: boolean) =>
+  `${styles.statusPill} ${styles.modelStatusPill} ${failed ? styles.failed : styles.success}`;
+
+// usage 明细里的缓存读取属于输入 Token 的子集，请求日志中的输入列展示净输入值。
+const getNetInputTokens = (inputTokens: number, cacheReadTokens: number) =>
+  Math.max(inputTokens - cacheReadTokens, 0);
+
+// TOKEN 合并列统一复用图标，便于在一格里同时表达净输入、输出与缓存读取。
+const TOKEN_CELL_ITEMS = [
+  { key: 'input', icon: '⬆', className: styles.tokenMetricInput, iconClassName: styles.tokenMetricInputIcon },
+  { key: 'output', icon: '⬇', className: styles.tokenMetricOutput, iconClassName: styles.tokenMetricOutputIcon },
+  { key: 'cache', icon: '■', className: styles.tokenMetricCache, iconClassName: styles.tokenMetricCacheIcon },
+] as const;
 
 // 单条金额只对已定价模型显示数值，缺少价格配置时保留占位符。
 const formatRequestCost = (cost: number | null) => {
@@ -262,8 +274,8 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             : null;
           const displayName = resolvedName ? `${resolvedName} (${masked})` : masked;
           const providerBaseUrl = normalizeOpenAIProviderBaseUrl(sourceInfo.baseUrl);
-          const inputTokens = detail.tokens.input_tokens || 0;
-          const hitTokens = extractMonitorHitTokens(detail.tokens);
+          const rawInputTokens = detail.tokens.input_tokens || 0;
+          const cacheReadTokens = extractMonitorHitTokens(detail.tokens);
           const reasoningEffort = detail.reasoning_effort?.trim() || '';
           const latencyMs = typeof detail.latency_ms === 'number' ? detail.latency_ms : null;
           // 单条消费金额沿用监控页与 usage 页统一的模型价格口径；
@@ -293,17 +305,16 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             providerBaseUrl,
             maskedKey: masked,
             failed: detail.failed,
-            inputTokens,
-            hitTokens,
-            hitRate: calculateMonitorHitRate(inputTokens, hitTokens),
+            inputTokens: getNetInputTokens(rawInputTokens, cacheReadTokens),
             outputTokens: detail.tokens.output_tokens || 0,
+            cacheReadTokens,
+            hitRate: calculateMonitorHitRate(rawInputTokens, cacheReadTokens),
             outputThroughput: calculateOutputThroughput(
               detail.tokens.output_tokens || 0,
               latencyMs,
               detail.failed,
             ),
             cost,
-            totalTokens: detail.tokens.total_tokens || 0,
             // 新版后端会返回 client_ip；旧快照可能仍只有 auth_index，这里保留回退，
             // 避免历史数据在监控中心中直接显示为空。
             clientIp: normalizeRequestClientIp(detail.client_ip) ?? normalizeAuthIndex(detail.auth_index) ?? '',
@@ -315,39 +326,29 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return entries.sort((a, b) => b.timestampMs - a.timestampMs);
   }, [effectiveData, providerMap, providerTypeMap, sourceInfoMap, authFileMap, modelPrices]);
 
-  // 预计算每个“渠道 + 模型”分组的累计请求数与最近请求状态，
-  // 请求日志表只保留这两个稳定指标，避免把“成功率”这种聚合指标塞回单行详情里误导阅读。
+  // 请求状态列展示同渠道同模型最近请求状态，保留连续成功/失败的排障信号。
   const precomputedStats = useMemo(() => {
     const statsMap = new Map<string, PrecomputedStats>();
-    const channelModelGroups: Record<string, { entry: LogEntry; index: number }[]> = {};
+    const channelModelGroups: Record<string, LogEntry[]> = {};
 
-    logEntries.forEach((entry, index) => {
+    logEntries.forEach((entry) => {
       const key = `${entry.source}|||${entry.model}|||${entry.reasoningEffort}`;
       if (!channelModelGroups[key]) {
         channelModelGroups[key] = [];
       }
-      channelModelGroups[key].push({ entry, index });
+      channelModelGroups[key].push(entry);
     });
 
     Object.values(channelModelGroups).forEach((group) => {
-      group.sort((a, b) => a.entry.timestampMs - b.entry.timestampMs);
-    });
-
-    Object.entries(channelModelGroups).forEach(([, group]) => {
-      let totalCount = 0;
       const recentRequests: ChannelModelRequest[] = [];
+      group.sort((a, b) => a.timestampMs - b.timestampMs);
 
-      group.forEach(({ entry }) => {
-        totalCount++;
+      group.forEach((entry) => {
         recentRequests.push({ failed: entry.failed, timestamp: entry.timestampMs });
         if (recentRequests.length > 10) {
           recentRequests.shift();
         }
-
-        statsMap.set(entry.id, {
-          recentRequests: [...recentRequests],
-          totalCount,
-        });
+        statsMap.set(entry.id, { recentRequests: [...recentRequests] });
       });
     });
 
@@ -397,9 +398,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return num.toLocaleString('zh-CN');
   };
 
-  const formatHitDisplay = (hitTokens: number, hitRate: number) => {
-    return `${formatNumber(hitTokens)} (${(hitRate * 100).toFixed(1)}%)`;
-  };
+  const formatHitRate = (hitRate: number) => `${(hitRate * 100).toFixed(1)}%`;
 
   // 响应时间优先保留毫秒级精度，超过 1 秒后自动切换为秒，便于快速识别慢请求。
   // 输出速率严格依赖 latency_ms，因此这里不额外猜测缺失耗时的情况。
@@ -416,10 +415,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
   };
 
   const getStats = (entry: LogEntry): PrecomputedStats => {
-    return precomputedStats.get(entry.id) || {
-      recentRequests: [],
-      totalCount: 0,
-    };
+    return precomputedStats.get(entry.id) || { recentRequests: [] };
   };
 
   const renderRow = (entry: LogEntry) => {
@@ -427,19 +423,50 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     const requestIpDisplay = entry.clientIp || '-';
     const channelTitle = entry.providerBaseUrl || entry.source;
     const modelDisplay = formatModelWithEffort(entry.model, entry.reasoningEffort);
+    const tokenItems = [
+      {
+        key: TOKEN_CELL_ITEMS[0].key,
+        icon: TOKEN_CELL_ITEMS[0].icon,
+        label: t('monitor.logs.header_input'),
+        value: formatNumber(entry.inputTokens),
+        className: TOKEN_CELL_ITEMS[0].className,
+        iconClassName: TOKEN_CELL_ITEMS[0].iconClassName,
+      },
+      {
+        key: TOKEN_CELL_ITEMS[1].key,
+        icon: TOKEN_CELL_ITEMS[1].icon,
+        label: t('monitor.logs.header_output'),
+        value: formatNumber(entry.outputTokens),
+        className: TOKEN_CELL_ITEMS[1].className,
+        iconClassName: TOKEN_CELL_ITEMS[1].iconClassName,
+      },
+      {
+        key: TOKEN_CELL_ITEMS[2].key,
+        icon: TOKEN_CELL_ITEMS[2].icon,
+        label: t('monitor.logs.header_cache_read'),
+        value: formatNumber(entry.cacheReadTokens),
+        className: TOKEN_CELL_ITEMS[2].className,
+        iconClassName: TOKEN_CELL_ITEMS[2].iconClassName,
+      },
+    ];
+    const hitRateDisplay = `(${formatHitRate(entry.hitRate)})`;
+    const tokenTitle = [
+      ...tokenItems.map((item) => `${item.icon} ${item.label} ${item.value}`),
+      `${t('monitor.logs.header_cache_hit_rate')} ${hitRateDisplay}`,
+    ].join(' / ');
 
     return (
       <>
+        <td title={entry.apiKey}>
+          {maskSecret(entry.apiKey)}
+        </td>
+        <td title={requestIpDisplay}>
+          {requestIpDisplay}
+        </td>
         <td title={modelDisplay}>
-          {modelDisplay}
-        </td>
-        <td>
-          <span className={`${styles.statusPill} ${entry.failed ? styles.failed : styles.success}`}>
-            {entry.failed ? t('monitor.logs.failed') : t('monitor.logs.success')}
+          <span className={getStatusPillClassName(entry.failed)}>
+            {modelDisplay}
           </span>
-        </td>
-        <td title={entry.latencyMs === null ? '-' : `${entry.latencyMs} ms`}>
-          {formatLatency(entry.latencyMs)}
         </td>
         <td>
           <div className={styles.statusBars}>
@@ -451,11 +478,25 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             ))}
           </div>
         </td>
-        <td title={requestIpDisplay}>
-          {requestIpDisplay}
+        <td title={entry.outputThroughput === null ? '-' : `${entry.outputTokens} / ${entry.latencyMs} ms`}>
+          {formatOutputThroughput(entry.outputThroughput, i18n.language)}
         </td>
-        <td title={entry.apiKey}>
-          {maskSecret(entry.apiKey)}
+        <td title={tokenTitle}>
+          <div className={styles.tokenSummary}>
+            {tokenItems.map((item) => (
+              <span key={item.key} className={`${styles.tokenMetric} ${item.className}`}>
+                <span className={`${styles.tokenMetricIcon} ${item.iconClassName}`} aria-hidden="true">{item.icon}</span>
+                <span>{item.value}</span>
+              </span>
+            ))}
+            <span className={styles.tokenMetricHitRate}>{hitRateDisplay}</span>
+          </div>
+        </td>
+        <td title={formatRequestCost(entry.cost)}>
+          {formatRequestCost(entry.cost)}
+        </td>
+        <td title={entry.latencyMs === null ? '-' : `${entry.latencyMs} ms`}>
+          {formatLatency(entry.latencyMs)}
         </td>
         <td>{entry.providerType}</td>
         <td title={channelTitle}>
@@ -488,19 +529,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             entry.maskedKey
           )}
         </td>
-        <td title={entry.outputThroughput === null ? '-' : `${entry.outputTokens} / ${entry.latencyMs} ms`}>
-          {formatOutputThroughput(entry.outputThroughput, i18n.language)}
-        </td>
-        <td title={formatRequestCost(entry.cost)}>
-          {formatRequestCost(entry.cost)}
-        </td>
-        <td>{formatNumber(stats.totalCount)}</td>
-        <td>{formatNumber(entry.inputTokens)}</td>
-        <td title={formatHitDisplay(entry.hitTokens, entry.hitRate)}>
-          {formatHitDisplay(entry.hitTokens, entry.hitRate)}
-        </td>
-        <td>{formatNumber(entry.outputTokens)}</td>
-        <td>{formatNumber(entry.totalTokens)}</td>
         <td>{formatTimestamp(entry.timestamp)}</td>
       </>
     );
@@ -599,21 +627,16 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             <table className={`${styles.table} ${styles.virtualTable}`}>
               <thead>
                 <tr>
+                  <th>{t('monitor.logs.header_api')}</th>
+                  <th>{t('monitor.logs.header_auth')}</th>
                   <th>{t('monitor.logs.header_model')}</th>
                   <th>{t('monitor.logs.header_status')}</th>
+                  <th>{t('monitor.logs.header_output_throughput')}</th>
+                  <th>{t('monitor.logs.header_tokens')}</th>
+                  <th>{t('monitor.logs.header_cost')}</th>
                   <th>{t('monitor.logs.header_latency')}</th>
-                  <th>{t('monitor.logs.header_recent')}</th>
-                  <th>{t('monitor.logs.header_auth')}</th>
-                  <th>{t('monitor.logs.header_api')}</th>
                   <th>{t('monitor.logs.header_request_type')}</th>
                   <th>{t('monitor.logs.header_source')}</th>
-                  <th>{t('monitor.logs.header_output_throughput')}</th>
-                  <th>{t('monitor.logs.header_cost')}</th>
-                  <th>{t('monitor.logs.header_count')}</th>
-                  <th>{t('monitor.logs.header_input')}</th>
-                  <th>{t('monitor.logs.header_hit')}</th>
-                  <th>{t('monitor.logs.header_output')}</th>
-                  <th>{t('monitor.logs.header_total')}</th>
                   <th>{t('monitor.logs.header_time')}</th>
                 </tr>
               </thead>

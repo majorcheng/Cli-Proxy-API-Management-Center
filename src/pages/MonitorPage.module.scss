@@ -695,9 +695,8 @@
 // 虚拟滚动表格固定列宽
 .virtualTable {
   table-layout: fixed;
-  // 请求日志的模型列现在承载“模型 + 思考挡位”，并新增单条金额列；
-  // 固定总宽后，表格横向滚动与各列截断会保持稳定。
-  min-width: 1680px;
+  // 请求日志按排障阅读顺序固定列宽，TOKEN 单元格合并 token 明细与缓存命中率。
+  min-width: 1400px;
 
   th, td {
     overflow: hidden;
@@ -705,38 +704,28 @@
     white-space: nowrap;
   }
 
+  // 请求 API
+  th:nth-child(1), td:nth-child(1) { width: 50px; }
+  // 请求 IP
+  th:nth-child(2), td:nth-child(2) { width: 50px; }
   // 模型（含思考挡位）
-  th:nth-child(1), td:nth-child(1) { width: 180px; }
-  // 状态
-  th:nth-child(2), td:nth-child(2) { width: 60px; }
+  th:nth-child(3), td:nth-child(3) { width: 80px; }
+  // 请求状态
+  th:nth-child(4), td:nth-child(4) { width: 50px; }
+  // 请求速度
+  th:nth-child(5), td:nth-child(5) { width: 50px; }
+  // TOKEN 合并列
+  th:nth-child(6), td:nth-child(6) { width: 130px; }
+  // 费用
+  th:nth-child(7), td:nth-child(7) { width: 50px; }
   // 响应时间
-  th:nth-child(3), td:nth-child(3) { width: 90px; }
-  // 最近请求状态
-  th:nth-child(4), td:nth-child(4) { width: 100px; }
-  // Auth 认证来源
-  th:nth-child(5), td:nth-child(5) { width: 80px; }
-  // API
-  th:nth-child(6), td:nth-child(6) { width: 100px; }
+  th:nth-child(8), td:nth-child(8) { width: 50px; }
   // 请求类型
-  th:nth-child(7), td:nth-child(7) { width: 65px; }
+  th:nth-child(9), td:nth-child(9) { width: 50px; }
   // 请求渠道
-  th:nth-child(8), td:nth-child(8) { width: 200px; }
-  // 输出速率
-  th:nth-child(9), td:nth-child(9) { width: 120px; }
-  // 单条金额
-  th:nth-child(10), td:nth-child(10) { width: 90px; }
-  // 请求数
-  th:nth-child(11), td:nth-child(11) { width: 70px; }
-  // 输入
-  th:nth-child(12), td:nth-child(12) { width: 80px; }
-  // 命中（百分比）
-  th:nth-child(13), td:nth-child(13) { width: 130px; }
-  // 输出
-  th:nth-child(14), td:nth-child(14) { width: 80px; }
-  // 总 Token
-  th:nth-child(15), td:nth-child(15) { width: 90px; }
+  th:nth-child(10), td:nth-child(10) { width: 200px; }
   // 时间
-  th:nth-child(16), td:nth-child(16) { width: 150px; }
+  th:nth-child(11), td:nth-child(11) { width: 150px; }
 }
 
 .table {
@@ -863,6 +852,68 @@
     background: rgba(239, 68, 68, 0.15);
     color: var(--danger-color, #ef4444);
   }
+}
+
+.modelStatusPill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tokenSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tokenMetric {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tokenMetricIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tokenMetricInput {
+  color: var(--text-primary);
+}
+
+.tokenMetricInputIcon {
+  color: #3b82f6;
+}
+
+.tokenMetricOutput {
+  color: var(--text-primary);
+}
+
+.tokenMetricOutputIcon {
+  color: #8b5cf6;
+}
+
+.tokenMetricCache {
+  color: #1585C6;
+}
+
+.tokenMetricCacheIcon {
+  color: #1585C6;
+}
+
+.tokenMetricHitRate {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 // 成功率颜色
