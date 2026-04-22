@@ -50,6 +50,10 @@ export interface UsageDetail {
   auth_index: number;
   client_ip?: string;
   reasoning_effort?: string;
+  latency_ms?: number;
+  request_type?: string;
+  first_token_ms?: number;
+  user_agent?: string;
   tokens: {
     input_tokens: number;
     output_tokens: number;
@@ -661,6 +665,12 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           timestamp,
           source: normalizeSource(detailRaw.source),
           auth_index: detailRaw.auth_index as unknown as number,
+          client_ip: typeof detailRaw.client_ip === 'string' ? detailRaw.client_ip : undefined,
+          reasoning_effort: typeof detailRaw.reasoning_effort === 'string' ? detailRaw.reasoning_effort : undefined,
+          latency_ms: typeof detailRaw.latency_ms === 'number' ? detailRaw.latency_ms : undefined,
+          request_type: typeof detailRaw.request_type === 'string' ? detailRaw.request_type : undefined,
+          first_token_ms: typeof detailRaw.first_token_ms === 'number' ? detailRaw.first_token_ms : undefined,
+          user_agent: typeof detailRaw.user_agent === 'string' ? detailRaw.user_agent : undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,
@@ -732,6 +742,12 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           timestamp,
           source: normalizeSource(detailRaw.source),
           auth_index: detailRaw.auth_index as unknown as number,
+          client_ip: typeof detailRaw.client_ip === 'string' ? detailRaw.client_ip : undefined,
+          reasoning_effort: typeof detailRaw.reasoning_effort === 'string' ? detailRaw.reasoning_effort : undefined,
+          latency_ms: typeof detailRaw.latency_ms === 'number' ? detailRaw.latency_ms : undefined,
+          request_type: typeof detailRaw.request_type === 'string' ? detailRaw.request_type : undefined,
+          first_token_ms: typeof detailRaw.first_token_ms === 'number' ? detailRaw.first_token_ms : undefined,
+          user_agent: typeof detailRaw.user_agent === 'string' ? detailRaw.user_agent : undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,

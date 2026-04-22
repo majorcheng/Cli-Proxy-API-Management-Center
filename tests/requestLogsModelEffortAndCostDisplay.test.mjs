@@ -53,13 +53,13 @@ test('请求日志中英文文案包含金额列表头', () => {
 test('请求日志表格按指定排障顺序同步调整列宽', () => {
   assert.doesNotMatch(requestLogsSource, /t\('monitor\.logs\.header_reasoning_effort'\)/);
   assert.match(requestLogsSource, /t\('monitor\.logs\.header_cost'\)/);
-  assert.match(monitorPageStyles, /\.virtualTable\s*\{[\s\S]*min-width:\s*1400px;/);
-  assert.match(monitorPageStyles, /th:nth-child\(1\), td:nth-child\(1\)\s*\{\s*width:\s*50px;\s*\}/);
-  assert.match(monitorPageStyles, /th:nth-child\(2\), td:nth-child\(2\)\s*\{\s*width:\s*50px;\s*\}/);
+  assert.match(monitorPageStyles, /\.virtualTable\s*\{[\s\S]*min-width:\s*1800px;/);
+  assert.match(monitorPageStyles, /th:nth-child\(1\), td:nth-child\(1\)\s*\{\s*width:\s*55px;\s*\}/);
+  assert.match(monitorPageStyles, /th:nth-child\(2\), td:nth-child\(2\)\s*\{\s*width:\s*55px;\s*\}/);
   assert.match(monitorPageStyles, /th:nth-child\(3\), td:nth-child\(3\)\s*\{\s*width:\s*80px;\s*\}/);
   assert.match(monitorPageStyles, /\.modelStatusText\s*\{[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
   assert.match(monitorPageStyles, /\.modelStatusNormal\s*\{[\s\S]*color:\s*var\(--text-primary\)/);
   assert.match(monitorPageStyles, /\.modelStatusFailed\s*\{[\s\S]*color:\s*var\(--danger-color,\s*#ef4444\)/);
-  assert.match(monitorPageStyles, /th:nth-child\(7\), td:nth-child\(7\)\s*\{\s*width:\s*50px;\s*\}/);
-  assert.match(monitorPageStyles, /th:nth-child\(11\), td:nth-child\(11\)\s*\{\s*width:\s*150px;\s*\}/);
+  assert.match(monitorPageStyles, /th:nth-child\(8\), td:nth-child\(8\)\s*\{\s*width:\s*50px;\s*\}/);
+  assert.match(monitorPageStyles, /th:nth-child\(13\), td:nth-child\(13\)\s*\{\s*width:\s*70px;\s*\}/);
 });

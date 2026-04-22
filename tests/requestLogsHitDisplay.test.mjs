@@ -45,8 +45,8 @@ test('请求日志中英文文案包含 TOKEN 与缓存命中百分比列表头'
 });
 
 test('请求日志表格按新列序同步调整固定列宽', () => {
-  assert.match(monitorPageStyles, /\.virtualTable\s*\{[\s\S]*min-width:\s*1400px;/);
-  assert.match(monitorPageStyles, /th:nth-child\(6\), td:nth-child\(6\)\s*\{\s*width:\s*130px;\s*\}/);
+  assert.match(monitorPageStyles, /\.virtualTable\s*\{[\s\S]*min-width:\s*1800px;/);
+  assert.match(monitorPageStyles, /th:nth-child\(7\), td:nth-child\(7\)\s*\{\s*width:\s*120px;\s*\}/);
   assert.match(monitorPageStyles, /\.tokenSummary\s*\{[\s\S]*flex-wrap:\s*wrap;[\s\S]*gap:\s*6px;/);
   assert.match(monitorPageStyles, /\.tokenMetricIcon\s*\{[\s\S]*width:\s*14px;[\s\S]*font-size:\s*14px;[\s\S]*font-weight:\s*700;/);
   assert.match(monitorPageStyles, /\.tokenMetricInput\s*\{[\s\S]*text-primary/);
@@ -56,5 +56,5 @@ test('请求日志表格按新列序同步调整固定列宽', () => {
   assert.match(monitorPageStyles, /\.tokenMetricCache\s*\{[\s\S]*#1585C6/);
   assert.match(monitorPageStyles, /\.tokenMetricCacheIcon\s*\{[\s\S]*#1585C6/);
   assert.match(monitorPageStyles, /\.tokenMetricHitRate\s*\{[\s\S]*text-primary/);
-  assert.match(monitorPageStyles, /th:nth-child\(11\), td:nth-child\(11\)\s*\{\s*width:\s*150px;\s*\}/);
+  assert.match(monitorPageStyles, /th:nth-child\(13\), td:nth-child\(13\)\s*\{\s*width:\s*70px;\s*\}/);
 });

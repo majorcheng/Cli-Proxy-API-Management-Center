@@ -54,6 +54,8 @@ interface LogEntry {
   providerBaseUrl: string;
   maskedKey: string;
   failed: boolean;
+  requestType: string;
+  firstTokenMs: number | null;
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
@@ -61,6 +63,7 @@ interface LogEntry {
   outputThroughput: number | null;
   cost: number | null;
   clientIp: string;
+  userAgent: string;
 }
 
 // 请求日志仅展示最近 36 条，避免页面出现双层纵向滚动
@@ -102,6 +105,32 @@ const formatRequestCost = (cost: number | null) => {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   })}`;
+};
+
+// 请求类型按后端 usage 的规范值展示为本地化语义，未知值保留原始文本便于排障。
+const formatRequestType = (requestType: string, translate: (key: string) => string) => {
+  switch (requestType) {
+    case 'sync':
+      return translate('monitor.logs.request_type_sync');
+    case 'stream':
+      return translate('monitor.logs.request_type_stream');
+    case 'websocket':
+      return translate('monitor.logs.request_type_websocket');
+    default:
+      return requestType || '-';
+  }
+};
+
+// 后端已经做过 UA 归一化，前端继续 trim 一次以兼容旧快照与手工导入数据。
+const normalizeUserAgentDisplay = (userAgent: unknown) =>
+  typeof userAgent === 'string' ? userAgent.trim() : '';
+
+// 首 token 耗时只展示正数；0 代表后端没有记录到有效首包时间。
+const normalizeFirstTokenMs = (firstTokenMs: unknown): number | null => {
+  if (typeof firstTokenMs !== 'number' || !Number.isFinite(firstTokenMs)) {
+    return null;
+  }
+  return firstTokenMs > 0 ? firstTokenMs : null;
 };
 
 export function RequestLogs({ data, loading: parentLoading, timeRange, providerMap, providerTypeMap, sourceInfoMap, authFileMap: propAuthFileMap, apiFilter }: RequestLogsProps) {
@@ -277,7 +306,10 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           const rawInputTokens = detail.tokens.input_tokens || 0;
           const cacheReadTokens = extractMonitorHitTokens(detail.tokens);
           const reasoningEffort = detail.reasoning_effort?.trim() || '';
+          const requestType = detail.request_type?.trim().toLowerCase() || '';
+          const firstTokenMs = normalizeFirstTokenMs(detail.first_token_ms);
           const latencyMs = typeof detail.latency_ms === 'number' ? detail.latency_ms : null;
+          const userAgent = normalizeUserAgentDisplay(detail.user_agent);
           // 单条消费金额沿用监控页与 usage 页统一的模型价格口径；
           // 已定价模型显示精确金额，未定价模型保留为短横线，避免把缺少价格误读成零消费。
           const cost = modelPrices[modelName]
@@ -305,6 +337,8 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             providerBaseUrl,
             maskedKey: masked,
             failed: detail.failed,
+            requestType,
+            firstTokenMs,
             inputTokens: calculateMonitorNetInputTokens(rawInputTokens, cacheReadTokens),
             outputTokens: detail.tokens.output_tokens || 0,
             cacheReadTokens,
@@ -318,6 +352,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             // 新版后端会返回 client_ip；旧快照可能仍只有 auth_index，这里保留回退，
             // 避免历史数据在监控中心中直接显示为空。
             clientIp: normalizeRequestClientIp(detail.client_ip) ?? normalizeAuthIndex(detail.auth_index) ?? '',
+            userAgent,
           });
         });
       });
@@ -421,6 +456,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
   const renderRow = (entry: LogEntry) => {
     const stats = getStats(entry);
     const requestIpDisplay = entry.clientIp || '-';
+    const requestTypeDisplay = formatRequestType(entry.requestType, t);
+    const firstTokenDisplay = formatLatency(entry.firstTokenMs);
+    const userAgentDisplay = entry.userAgent || '-';
     const channelTitle = entry.providerBaseUrl || entry.source;
     const modelDisplay = formatModelWithEffort(entry.model, entry.reasoningEffort);
     const tokenItems = [
@@ -478,6 +516,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
             ))}
           </div>
         </td>
+        <td title={requestTypeDisplay}>
+          {requestTypeDisplay}
+        </td>
         <td title={entry.outputThroughput === null ? '-' : `${entry.outputTokens} / ${entry.latencyMs} ms`}>
           {formatOutputThroughput(entry.outputThroughput, i18n.language)}
         </td>
@@ -494,6 +535,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
         </td>
         <td title={formatRequestCost(entry.cost)}>
           {formatRequestCost(entry.cost)}
+        </td>
+        <td title={entry.firstTokenMs === null ? '-' : `${entry.firstTokenMs} ms`}>
+          {firstTokenDisplay}
         </td>
         <td title={entry.latencyMs === null ? '-' : `${entry.latencyMs} ms`}>
           {formatLatency(entry.latencyMs)}
@@ -530,6 +574,9 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
           )}
         </td>
         <td>{formatTimestamp(entry.timestamp)}</td>
+        <td title={userAgentDisplay}>
+          {userAgentDisplay}
+        </td>
       </>
     );
   };
@@ -631,13 +678,16 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
                   <th>{t('monitor.logs.header_auth')}</th>
                   <th>{t('monitor.logs.header_model')}</th>
                   <th>{t('monitor.logs.header_status')}</th>
+                  <th>{t('monitor.logs.header_request_type')}</th>
                   <th>{t('monitor.logs.header_output_throughput')}</th>
                   <th>{t('monitor.logs.header_tokens')}</th>
                   <th>{t('monitor.logs.header_cost')}</th>
+                  <th>{t('monitor.logs.header_first_token')}</th>
                   <th>{t('monitor.logs.header_latency')}</th>
-                  <th>{t('monitor.logs.header_request_type')}</th>
+                  <th>{t('monitor.logs.header_provider_type')}</th>
                   <th>{t('monitor.logs.header_source')}</th>
                   <th>{t('monitor.logs.header_time')}</th>
+                  <th>{t('monitor.logs.header_user_agent')}</th>
                 </tr>
               </thead>
               <tbody>

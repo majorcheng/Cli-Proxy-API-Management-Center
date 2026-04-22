@@ -695,8 +695,8 @@
 // 虚拟滚动表格固定列宽
 .virtualTable {
   table-layout: fixed;
-  // 请求日志按排障阅读顺序固定列宽，TOKEN 单元格合并 token 明细与缓存命中率。
-  min-width: 1400px;
+  // 请求日志按排障阅读顺序固定列宽，新增类型、首 Token 与 UA 后保留横向浏览空间。
+  min-width: 1800px;
 
   th, td {
     overflow: hidden;
@@ -705,27 +705,33 @@
   }
 
   // 请求 API
-  th:nth-child(1), td:nth-child(1) { width: 50px; }
+  th:nth-child(1), td:nth-child(1) { width: 55px; }
   // 请求 IP
-  th:nth-child(2), td:nth-child(2) { width: 50px; }
+  th:nth-child(2), td:nth-child(2) { width: 55px; }
   // 模型（含思考挡位）
   th:nth-child(3), td:nth-child(3) { width: 80px; }
   // 请求状态
   th:nth-child(4), td:nth-child(4) { width: 50px; }
+  // 类型
+  th:nth-child(5), td:nth-child(5) { width: 35px; }
   // 请求速度
-  th:nth-child(5), td:nth-child(5) { width: 50px; }
+  th:nth-child(6), td:nth-child(6) { width: 50px; }
   // TOKEN 合并列
-  th:nth-child(6), td:nth-child(6) { width: 130px; }
+  th:nth-child(7), td:nth-child(7) { width: 120px; }
   // 费用
-  th:nth-child(7), td:nth-child(7) { width: 50px; }
-  // 响应时间
   th:nth-child(8), td:nth-child(8) { width: 50px; }
-  // 请求类型
-  th:nth-child(9), td:nth-child(9) { width: 50px; }
+  // 首 Token 时间
+  th:nth-child(9), td:nth-child(9) { width: 35px; }
+  // 响应时间
+  th:nth-child(10), td:nth-child(10) { width: 35px; }
+  // 渠道类型
+  th:nth-child(11), td:nth-child(11) { width: 35px; }
   // 请求渠道
-  th:nth-child(10), td:nth-child(10) { width: 200px; }
+  th:nth-child(12), td:nth-child(12) { width: 130px; }
   // 时间
-  th:nth-child(11), td:nth-child(11) { width: 150px; }
+  th:nth-child(13), td:nth-child(13) { width: 70px; }
+  // UA
+  th:nth-child(14), td:nth-child(14) { width: 130px; }
 }
 
 .table {
