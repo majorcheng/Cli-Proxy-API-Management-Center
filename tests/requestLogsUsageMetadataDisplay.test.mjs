@@ -77,7 +77,7 @@ test('请求日志中英文文案包含新观测字段和类型枚举', () => {
 test('请求日志表格为新增列保留固定列宽', () => {
   assert.match(
     monitorPageStyles,
-    /th:nth-child\(5\), td:nth-child\(5\)\s*\{\s*width:\s*35px;\s*\}/
+    /th:nth-child\(5\), td:nth-child\(5\)\s*\{\s*width:\s*42px;\s*\}/
   );
   assert.match(
     monitorPageStyles,
