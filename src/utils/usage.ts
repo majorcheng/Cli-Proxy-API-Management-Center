@@ -94,6 +94,7 @@ export type UsageTimeRange = '7h' | '24h' | '7d' | 'all';
 const TOKENS_PER_PRICE_UNIT = 1_000_000;
 const MODEL_PRICE_STORAGE_KEY = 'cli-proxy-model-prices-v2';
 const OFFICIAL_MODEL_PRICES: Readonly<Record<string, ModelPrice>> = Object.freeze({
+  'gpt-5.5': Object.freeze({ prompt: 5, completion: 30, cache: 0.5 }),
   'gpt-5.4': Object.freeze({ prompt: 2.5, completion: 15, cache: 0.25 }),
   'gpt-5.4-mini': Object.freeze({ prompt: 0.75, completion: 4.5, cache: 0.075 }),
   'gpt-5.3-codex': Object.freeze({ prompt: 1.75, completion: 14, cache: 0.175 }),
