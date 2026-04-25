@@ -1010,6 +1010,32 @@
   }
 }
 
+.logSearchInput {
+  padding: 6px 10px;
+  border-radius: $radius-md;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  min-width: 180px;
+
+  @include mobile {
+    font-size: 11px;
+    min-width: 100px;
+    padding: 5px 8px;
+    flex: 1 1 100%;
+  }
+
+  &::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+}
+
 .logLastUpdate {
   margin-left: auto;
   font-size: 12px;

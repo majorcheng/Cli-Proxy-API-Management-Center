@@ -19,7 +19,6 @@ import { normalizeOpenAIProviderBaseUrl, resolveSourceDisplay } from '@/utils/so
 import type { SourceInfo, CredentialInfo } from '@/types/sourceInfo';
 import {
   maskSecret,
-  formatProviderDisplay,
   formatTimestamp,
   getProviderDisplayParts,
   filterDataByTimeRange,
@@ -89,6 +88,23 @@ const formatModelWithEffort = (model: string, reasoningEffort: string) => {
 const getModelTextClassName = (failed: boolean) =>
   `${styles.modelStatusText} ${failed ? styles.modelStatusFailed : styles.modelStatusNormal}`;
 
+// 请求渠道搜索只匹配渠道列相关文本，避免和模型、状态等筛选意图串扰。
+const normalizeChannelSearchText = (value: string) => value.trim().toLowerCase();
+
+// 渠道列可能展示名称、脱敏凭据或链接地址，这里统一纳入搜索候选。
+const isChannelMatchedBySearch = (entry: LogEntry, keyword: string) => {
+  const normalizedKeyword = normalizeChannelSearchText(keyword);
+  if (!normalizedKeyword) return true;
+
+  return [
+    entry.source,
+    entry.displayName,
+    entry.providerName ?? '',
+    entry.providerBaseUrl,
+    entry.maskedKey,
+  ].some((value) => normalizeChannelSearchText(value).includes(normalizedKeyword));
+};
+
 // TOKEN 合并列统一复用图标，便于在一格里同时表达净输入、输出与缓存读取。
 const TOKEN_CELL_ITEMS = [
   { key: 'input', icon: '⬆', className: styles.tokenMetricInput, iconClassName: styles.tokenMetricInputIcon },
@@ -137,7 +153,7 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
   const { t, i18n } = useTranslation();
   const [filterApi, setFilterApi] = useState('');
   const [filterModel, setFilterModel] = useState('');
-  const [filterSource, setFilterSource] = useState('');
+  const [sourceSearchQuery, setSourceSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'success' | 'failed'>('');
   const [filterProviderType, setFilterProviderType] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(10);
@@ -390,16 +406,14 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return statsMap;
   }, [logEntries]);
 
-  const { apis, models, sources, providerTypes } = useMemo(() => {
+  const { apis, models, providerTypes } = useMemo(() => {
     const apiSet = new Set<string>();
     const modelSet = new Set<string>();
-    const sourceSet = new Set<string>();
     const providerTypeSet = new Set<string>();
 
     logEntries.forEach((entry) => {
       apiSet.add(entry.apiKey);
       modelSet.add(entry.model);
-      sourceSet.add(entry.source);
       if (entry.providerType && entry.providerType !== '--') {
         providerTypeSet.add(entry.providerType);
       }
@@ -408,7 +422,6 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return {
       apis: Array.from(apiSet).sort(),
       models: Array.from(modelSet).sort(),
-      sources: Array.from(sourceSet).sort(),
       providerTypes: Array.from(providerTypeSet).sort(),
     };
   }, [logEntries]);
@@ -417,13 +430,13 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
     return logEntries.filter((entry) => {
       if (filterApi && entry.apiKey !== filterApi) return false;
       if (filterModel && entry.model !== filterModel) return false;
-      if (filterSource && entry.source !== filterSource) return false;
+      if (!isChannelMatchedBySearch(entry, sourceSearchQuery)) return false;
       if (filterStatus === 'success' && entry.failed) return false;
       if (filterStatus === 'failed' && !entry.failed) return false;
       if (filterProviderType && entry.providerType !== filterProviderType) return false;
       return true;
     });
-  }, [logEntries, filterApi, filterModel, filterSource, filterStatus, filterProviderType]);
+  }, [logEntries, filterApi, filterModel, sourceSearchQuery, filterStatus, filterProviderType]);
 
   const visibleEntries = useMemo(() => {
     return filteredEntries.slice(0, MAX_VISIBLE_LOGS);
@@ -625,18 +638,14 @@ export function RequestLogs({ data, loading: parentLoading, timeRange, providerM
               <option key={model} value={model}>{model}</option>
             ))}
           </select>
-          <select
-            className={styles.logSelect}
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-          >
-            <option value="">{t('monitor.logs.all_sources')}</option>
-            {sources.map((source) => (
-              <option key={source} value={source}>
-                {formatProviderDisplay(source, providerMap)}
-              </option>
-            ))}
-          </select>
+          <input
+            type="search"
+            className={styles.logSearchInput}
+            value={sourceSearchQuery}
+            onChange={(e) => setSourceSearchQuery(e.target.value)}
+            placeholder={t('monitor.logs.source_search_placeholder')}
+            aria-label={t('monitor.logs.source_search_label')}
+          />
           <select
             className={styles.logSelect}
             value={filterStatus}

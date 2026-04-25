@@ -79,25 +79,6 @@ export function resolveProvider(
 }
 
 /**
- * 格式化渠道显示名称：渠道名 (脱敏后的api-key)
- * @param source 来源标识
- * @param providerMap 渠道映射表
- * @returns 格式化后的显示名称
- */
-export function formatProviderDisplay(
-  source: string,
-  providerMap: Record<string, string>
-): string {
-  if (!source || source === '-' || source === 'unknown') {
-    return source || '-';
-  }
-  const provider = resolveProvider(source, providerMap);
-  const masked = maskSecret(source);
-  if (!provider) return masked;
-  return `${provider} (${masked})`;
-}
-
-/**
  * 获取渠道显示信息（分离渠道名和秘钥）
  * @param source 来源标识
  * @param providerMap 渠道映射表
