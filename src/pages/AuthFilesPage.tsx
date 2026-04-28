@@ -86,7 +86,9 @@ export function AuthFilesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(resolvePersistedAuthFilesPageSize(null));
-  const [pageSizeInput, setPageSizeInput] = useState(String(resolvePersistedAuthFilesPageSize(null)));
+  const [pageSizeInput, setPageSizeInput] = useState(
+    String(resolvePersistedAuthFilesPageSize(null))
+  );
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
@@ -95,7 +97,7 @@ export function AuthFilesPage() {
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
 
-  const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
+  const { usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const {
     files,
     selectedFiles,
@@ -782,34 +784,40 @@ export function AuthFilesPage() {
               <div
                 className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''} ${styles.fileGridCompact}`}
               >
-                {pageItems.map((file) => (
-                  <AuthFileCard
-                    key={file.name}
-                    file={file}
-                    selected={selectedFiles.has(file.name)}
-                    resolvedTheme={resolvedTheme}
-                    disableControls={disableControls}
-                    keyStats={keyStats}
-                    usedTokens={authFileUsageSummary.get(file.name)?.totalTokens ?? 0}
-                    usageCost={(() => {
-                      const summary = authFileUsageSummary.get(file.name);
-                      if (!summary || summary.pricedRequestCount <= 0) {
-                        return null;
+                {pageItems.map((file) => {
+                  const summary = authFileUsageSummary.get(file.name);
+
+                  return (
+                    <AuthFileCard
+                      key={file.name}
+                      file={file}
+                      selected={selectedFiles.has(file.name)}
+                      resolvedTheme={resolvedTheme}
+                      disableControls={disableControls}
+                      fileStats={{
+                        success: summary?.success ?? 0,
+                        failure: summary?.failure ?? 0,
+                        totalTokens: summary?.totalTokens ?? 0,
+                      }}
+                      usedTokens={summary?.totalTokens ?? 0}
+                      usageCost={
+                        summary && summary.pricedRequestCount > 0
+                          ? {
+                              totalCost: summary.totalCost,
+                              unpricedRequestCount: summary.unpricedRequestCount,
+                              unpricedModels: summary.unpricedModels,
+                            }
+                          : null
                       }
-                      return {
-                        totalCost: summary.totalCost,
-                        unpricedRequestCount: summary.unpricedRequestCount,
-                        unpricedModels: summary.unpricedModels
-                      };
-                    })()}
-                    statusBarCache={statusBarCache}
-                    onShowModels={showModels}
-                    onOpenPrefixProxyEditor={openPrefixProxyEditor}
-                    onRefreshCodex={refreshCodexForFile}
-                    onToggleSelect={toggleSelect}
-                    codexRefreshing={codexRefreshing[file.name] === true}
-                  />
-                ))}
+                      statusBarCache={statusBarCache}
+                      onShowModels={showModels}
+                      onOpenPrefixProxyEditor={openPrefixProxyEditor}
+                      onRefreshCodex={refreshCodexForFile}
+                      onToggleSelect={toggleSelect}
+                      codexRefreshing={codexRefreshing[file.name] === true}
+                    />
+                  );
+                })}
               </div>
             )}
 

@@ -10,7 +10,7 @@ import {
   formatUsd,
   formatCompactNumber,
   normalizeAuthIndex,
-  type KeyStats,
+  type KeyStatBucket,
 } from '@/utils/usage';
 import { formatFileSize } from '@/utils/format';
 import {
@@ -23,7 +23,6 @@ import {
   getTypeLabel,
   isRuntimeOnlyAuthFile,
   parsePriorityValue,
-  resolveAuthFileStats,
   type QuotaProviderType,
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
@@ -45,7 +44,7 @@ export type AuthFileCardProps = {
   selected: boolean;
   resolvedTheme: ResolvedTheme;
   disableControls: boolean;
-  keyStats: KeyStats;
+  fileStats: KeyStatBucket;
   usedTokens: number;
   usageCost: AuthFileUsageCost | null;
   statusBarCache: Map<string, AuthFileStatusBarData>;
@@ -69,7 +68,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     selected,
     resolvedTheme,
     disableControls,
-    keyStats,
+    fileStats,
     usedTokens,
     usageCost,
     statusBarCache,
@@ -80,7 +79,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
     codexRefreshing,
   } = props;
 
-  const fileStats = resolveAuthFileStats(file, keyStats);
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
   const isAistudio = (file.type || '').toLowerCase() === 'aistudio';
   const providerKey = resolveAuthProvider(file);

@@ -9,12 +9,6 @@ import iconKimiLight from '@/assets/icons/kimi-light.svg';
 import iconQwen from '@/assets/icons/qwen.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import type { AuthFileItem } from '@/types';
-import {
-  normalizeAuthIndex,
-  normalizeUsageSourceId,
-  type KeyStatBucket,
-  type KeyStats,
-} from '@/utils/usage';
 
 export type ThemeColors = { bg: string; text: string; border?: string };
 export type TypeColorSet = { light: ThemeColors; dark?: ThemeColors };
@@ -27,12 +21,7 @@ export type AuthFileModelItem = {
 };
 export type AuthFileIconAsset = string | { light: string; dark: string };
 
-export type QuotaProviderType =
-  | 'antigravity'
-  | 'claude'
-  | 'codex'
-  | 'gemini-cli'
-  | 'kimi';
+export type QuotaProviderType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi';
 
 export const QUOTA_PROVIDER_TYPES = new Set<QuotaProviderType>([
   'antigravity',
@@ -232,50 +221,6 @@ export function isRuntimeOnlyAuthFile(file: AuthFileItem): boolean {
   return false;
 }
 
-export function resolveAuthFileStats(file: AuthFileItem, stats: KeyStats): KeyStatBucket {
-  const defaultStats: KeyStatBucket = { success: 0, failure: 0, totalTokens: 0 };
-  const rawFileName = file?.name || '';
-
-  // 兼容 auth_index 和 authIndex 两种字段名（API 返回的是 auth_index）
-  const rawAuthIndex = file['auth_index'] ?? file.authIndex;
-  const authIndexKey = normalizeAuthIndex(rawAuthIndex);
-
-  // 尝试根据 authIndex 匹配
-  if (authIndexKey && stats.byAuthIndex?.[authIndexKey]) {
-    return stats.byAuthIndex[authIndexKey];
-  }
-
-  // 尝试根据 source (文件名) 匹配
-  const fileNameId = rawFileName ? normalizeUsageSourceId(rawFileName) : '';
-  if (fileNameId && stats.bySource?.[fileNameId]) {
-    const fromName = stats.bySource[fileNameId];
-    // 认证文件卡牌上的成功/失败/Token 用量必须走同一套匹配口径，
-    // 否则会出现“请求数来自 auth_index，但 Token 来自 source”的展示漂移。
-    if (fromName.success > 0 || fromName.failure > 0 || fromName.totalTokens > 0) {
-      return fromName;
-    }
-  }
-
-  // 尝试去掉扩展名后匹配
-  if (rawFileName) {
-    const nameWithoutExt = rawFileName.replace(/\.[^/.]+$/, '');
-    if (nameWithoutExt && nameWithoutExt !== rawFileName) {
-      const nameWithoutExtId = normalizeUsageSourceId(nameWithoutExt);
-      const fromNameWithoutExt = nameWithoutExtId ? stats.bySource?.[nameWithoutExtId] : undefined;
-      if (
-        fromNameWithoutExt &&
-        (fromNameWithoutExt.success > 0 ||
-          fromNameWithoutExt.failure > 0 ||
-          fromNameWithoutExt.totalTokens > 0)
-      ) {
-        return fromNameWithoutExt;
-      }
-    }
-  }
-
-  return defaultStats;
-}
-
 const parseModifiedDate = (item: AuthFileItem): Date | null => {
   const raw = item['modtime'] ?? item.modified;
   if (!raw) return null;
@@ -300,7 +245,7 @@ export const formatModifiedCompact = (item: AuthFileItem): string => {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
   });
 };
 

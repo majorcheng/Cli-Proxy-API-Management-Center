@@ -11,6 +11,8 @@ import { resolveAuthFileUsedTokensWindow } from '@/features/authFiles/codexWeekl
 
 export type AuthFileUsageSummary = {
   matched: boolean;
+  success: number;
+  failure: number;
   totalTokens: number;
   totalCost: number;
   pricedRequestCount: number;
@@ -20,11 +22,13 @@ export type AuthFileUsageSummary = {
 
 const EMPTY_USAGE_SUMMARY: AuthFileUsageSummary = {
   matched: false,
+  success: 0,
+  failure: 0,
   totalTokens: 0,
   totalCost: 0,
   pricedRequestCount: 0,
   unpricedRequestCount: 0,
-  unpricedModels: []
+  unpricedModels: [],
 };
 
 const resolveDetailTimestampMs = (detail: UsageDetail): number =>
@@ -57,13 +61,28 @@ const summarizeUsageInWindow = (
   }
 
   const pricingSummary = summarizePricingFromDetails(matchedDetails, modelPrices);
+  let success = 0;
+  let failure = 0;
+  let totalTokens = 0;
+
+  matchedDetails.forEach((detail) => {
+    if (detail.failed) {
+      failure += 1;
+    } else {
+      success += 1;
+    }
+    totalTokens += extractTotalTokens(detail);
+  });
+
   return {
     matched: true,
-    totalTokens: matchedDetails.reduce((sum, detail) => sum + extractTotalTokens(detail), 0),
+    success,
+    failure,
+    totalTokens,
     totalCost: pricingSummary.totalCost,
     pricedRequestCount: pricingSummary.pricedRequestCount,
     unpricedRequestCount: pricingSummary.unpricedRequestCount,
-    unpricedModels: pricingSummary.unpricedModels
+    unpricedModels: pricingSummary.unpricedModels,
   };
 };
 
@@ -158,6 +177,9 @@ export function buildAuthFileUsedTokensMap(
 ): Map<string, number> {
   const usageSummaryMap = buildAuthFileUsageSummaryMap(files, usageDetails, {}, nowMs);
   return new Map(
-    Array.from(usageSummaryMap.entries()).map(([fileName, summary]) => [fileName, summary.totalTokens])
+    Array.from(usageSummaryMap.entries()).map(([fileName, summary]) => [
+      fileName,
+      summary.totalTokens,
+    ])
   );
 }
